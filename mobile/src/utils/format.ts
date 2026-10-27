@@ -35,3 +35,9 @@ export function days(v: number | string | null | undefined): string {
   if (v === null || v === undefined) return "-";
   return `${Math.round(Number(v))} d`;
 }
+
+/** Percentage change from prev to cur, or null when there is no baseline. */
+export function pctChange(cur: number, prev: number): number | null {
+  if (!prev) return null;
+  return Math.round(((cur - prev) / prev) * 100);
+}

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "../api/client";
-import { Button, Card, Input, RiskBadge, Stat, StatusView } from "../components/ui";
+import { Button, Card, KpiTile, Notice, RiskBadge, Row, SectionTitle, StatusView, Stepper } from "../components/ui";
 import { LineChart } from "../components/LineChart";
-import { colors, space } from "../theme";
-import { dateLabel, num } from "../utils/format";
+import { riskMeta, space, type, useTheme } from "../theme";
+import { dateLabel, money, num, rate } from "../utils/format";
 import type { RootStackParamList } from "../navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Product">;
@@ -18,97 +19,117 @@ function toDate(s: string): Date {
 
 export function ProductScreen({ route }: Props) {
   const { id } = route.params;
+  const t = useTheme();
   const qc = useQueryClient();
   const { width } = useWindowDimensions();
   const detail = useQuery({ queryKey: ["variant", id], queryFn: () => api.variant(id) });
+  const store = useQuery({ queryKey: ["store"], queryFn: api.store });
+  const currency = store.data?.currency || "USD";
 
-  const [lead, setLead] = useState("");
-  const [safety, setSafety] = useState("");
+  const [lead, setLead] = useState(14);
+  const [safety, setSafety] = useState(0);
   useEffect(() => {
     if (detail.data) {
-      setLead(String(detail.data.variant.lead_time_days));
-      setSafety(String(detail.data.variant.safety_stock));
+      setLead(detail.data.variant.lead_time_days);
+      setSafety(detail.data.variant.safety_stock);
     }
   }, [detail.data]);
 
   const save = useMutation({
-    mutationFn: () =>
-      api.updateVariant(id, {
-        lead_time_days: Math.max(1, parseInt(lead, 10) || 1),
-        safety_stock: Math.max(0, parseInt(safety, 10) || 0),
-      }),
+    mutationFn: () => api.updateVariant(id, { lead_time_days: Math.max(1, lead), safety_stock: Math.max(0, safety) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["variant", id] });
       qc.invalidateQueries({ queryKey: ["risks"] });
     },
   });
 
-  if (detail.isLoading) return <StatusView title="Loading..." spinner />;
-  if (detail.isError || !detail.data) return <StatusView title="Could not load product" body={(detail.error as Error)?.message} error />;
+  if (detail.isLoading) return <StatusView title="Loading product" spinner />;
+  if (detail.isError || !detail.data)
+    return <StatusView icon="alert-circle-outline" toneName="danger" title="Could not load product" body={(detail.error as Error)?.message} />;
 
   const { variant, history, forecast, risk } = detail.data;
   const untracked = risk?.risk_level === "untracked" || !variant.track_inventory;
   const fcPoints = forecast
-    ? (typeof forecast.daily_forecast === "string" ? JSON.parse(forecast.daily_forecast) : forecast.daily_forecast) as { d: string; y: number }[]
+    ? ((typeof forecast.daily_forecast === "string" ? JSON.parse(forecast.daily_forecast) : forecast.daily_forecast) as { d: string; y: number }[])
     : [];
+  const dirty = detail.data && (lead !== variant.lead_time_days || safety !== variant.safety_stock);
+  const meta = risk ? riskMeta[risk.risk_level] : null;
+  const revenueAtRisk = Number(risk?.revenue_at_risk ?? 0);
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
-      <Text style={styles.title}>{variant.title || variant.product_title}</Text>
-      <View style={styles.subRow}>
-        {variant.sku ? <Text style={styles.sub}>SKU {variant.sku} · </Text> : null}
-        <Text style={styles.sub}>{forecast ? `model ${forecast.model_used}` : "no forecast yet"}</Text>
-        {risk ? <View style={{ marginLeft: space.sm }}><RiskBadge level={risk.risk_level} /></View> : null}
-      </View>
-      {untracked ? <Text style={styles.warn}>Inventory is not tracked in your store for this product, so stock and stockout date are unknown.</Text> : null}
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl * 2 }}>
+      <Text style={[type.title, { color: t.text }]}>{variant.title || variant.product_title}</Text>
+      <Text style={[type.caption, { color: t.textMuted, marginTop: 2 }]}>
+        {variant.sku ? `SKU ${variant.sku}` : "No SKU"}{variant.price ? ` · ${money(variant.price, currency)}` : ""}
+      </Text>
+      {risk ? (
+        <View style={{ flexDirection: "row", alignItems: "center", marginTop: space.md }}>
+          <RiskBadge level={risk.risk_level} size="md" />
+          {meta ? <Text style={[type.caption, { color: t.textSecondary, marginLeft: 10, flex: 1 }]}>{meta.hint}</Text> : null}
+        </View>
+      ) : null}
 
-      <View style={styles.cards}>
-        <Stat label="Current stock" value={untracked ? "unknown" : num(risk?.current_stock ?? variant.current_stock)} />
-        <Stat label="Days of cover" value={risk?.days_of_stock != null ? `${Math.round(Number(risk.days_of_stock))} days` : "-"} />
-        <Stat label="Projected stockout" value={dateLabel(risk?.stockout_date)} color={risk?.risk_level === "critical" ? colors.red : undefined} />
-        <Stat label="Suggested reorder" value={`${num(risk?.reorder_qty ?? 0)} units`} color={colors.green} />
-      </View>
+      {untracked ? (
+        <View style={{ marginTop: space.md }}>
+          <Notice icon="eye-off-outline" toneName="accent" title="Stock not tracked in your store">
+            Demand is forecast, but stock, days of cover and stockout date are unknown until inventory tracking is turned on.
+          </Notice>
+        </View>
+      ) : null}
 
-      <Card style={{ marginBottom: space.md }}>
+      <SectionTitle>Status</SectionTitle>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+        <KpiTile label="On hand" icon="cube-outline" toneName="info" value={untracked ? "—" : num(risk?.current_stock ?? variant.current_stock)} sub="units in stock" />
+        <KpiTile label="Days of cover" icon="hourglass-outline" toneName={risk?.risk_level === "critical" ? "danger" : "neutral"} value={risk?.days_of_stock != null ? `${Math.round(Number(risk.days_of_stock))} d` : "—"} sub={`lead time ${variant.lead_time_days} d`} />
+        <KpiTile label="Stockout" icon="time-outline" toneName={risk?.stockout_date ? "warning" : "neutral"} value={dateLabel(risk?.stockout_date)} sub="projected date" />
+        <KpiTile label="Reorder" icon="cart-outline" toneName="primary" value={`${num(risk?.reorder_qty ?? 0)}`} sub={`units · point ${num(risk?.reorder_point)}`} />
+      </View>
+      {revenueAtRisk > 0 ? (
+        <Text style={[type.caption, { color: t.danger, marginTop: space.sm }]}>
+          {money(revenueAtRisk, currency)} of sales at risk in the next 8 weeks if not reordered.
+        </Text>
+      ) : null}
+
+      <SectionTitle>Demand</SectionTitle>
+      <Card>
         <LineChart
-          width={width - space.lg * 2 - space.md * 2}
+          width={width - space.lg * 2 - space.lg * 2}
           history={history.map((h) => ({ x: toDate(h.sale_date), y: Number(h.units_sold) }))}
           forecast={fcPoints.map((f) => ({ x: toDate(f.d), y: Number(f.y) }))}
         />
-        <View style={styles.legend}>
-          <Text style={styles.legendItem}><Text style={{ color: colors.blue }}>●</Text> Sales (90d)</Text>
-          <Text style={styles.legendItem}><Text style={{ color: colors.green }}>●</Text> Forecast (8w)</Text>
-          {forecast ? <Text style={styles.legendItem}>run {dateLabel(forecast.run_date)}</Text> : null}
+        <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
+          <Legend color={t.chartHistory} label="Sales, last 90 days" />
+          <Legend color={t.chartForecast} label="Forecast, 8 weeks" />
+        </View>
+        <View style={{ marginTop: space.md, borderTopWidth: 1, borderTopColor: t.border }}>
+          <Row icon="pulse-outline" toneName="primary" title={forecast ? `${rate(forecast.avg_daily_demand)} units / day` : "No forecast yet"} subtitle={forecast ? `Average forecast demand · model ${forecast.model_used} · run ${dateLabel(forecast.run_date)}` : "The nightly run will add one"} last />
         </View>
       </Card>
 
+      <SectionTitle>Reorder settings</SectionTitle>
       <Card>
-        <Text style={styles.sectionTitle}>Reorder settings</Text>
-        <View style={{ flexDirection: "row", gap: space.sm }}>
-          <View style={{ flex: 1 }}>
-            <Input label="Lead time (days)" value={lead} onChangeText={setLead} keyboardType="number-pad" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Input label="Safety stock (units)" value={safety} onChangeText={setSafety} keyboardType="number-pad" />
-          </View>
+        <View style={{ flexDirection: "row", gap: space.md }}>
+          <Stepper label="Lead time" value={lead} onChange={setLead} min={1} unit="days from order to delivery" />
+          <Stepper label="Safety stock" value={safety} onChange={setSafety} min={0} unit="units kept as buffer" />
         </View>
-        <Button title={save.isSuccess ? "Saved" : "Save"} onPress={() => save.mutate()} loading={save.isPending} />
-        <Text style={styles.note}>Risk levels update on the next forecast run.</Text>
+        <View style={{ marginTop: space.lg }}>
+          <Button title={save.isSuccess && !dirty ? "Saved" : "Save settings"} icon={save.isSuccess && !dirty ? "checkmark" : undefined} onPress={() => save.mutate()} loading={save.isPending} disabled={!dirty} />
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", marginTop: space.sm }}>
+          <Ionicons name="information-circle-outline" size={14} color={t.textMuted} style={{ marginRight: 6 }} />
+          <Text style={[type.caption, { color: t.textMuted, flex: 1 }]}>Reorder point = demand during lead time + safety stock. Risk levels update on the next forecast run.</Text>
+        </View>
       </Card>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: colors.bg },
-  body: { padding: space.lg, paddingBottom: space.xl * 2 },
-  title: { color: colors.text, fontSize: 18, fontWeight: "800" },
-  subRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", marginTop: 4, marginBottom: space.md },
-  sub: { color: colors.dim, fontSize: 12 },
-  warn: { color: colors.purple, fontSize: 12, marginBottom: space.md, lineHeight: 17 },
-  cards: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginBottom: space.md },
-  legend: { flexDirection: "row", gap: 14, marginTop: 6 },
-  legendItem: { color: colors.dim, fontSize: 11 },
-  sectionTitle: { color: colors.text, fontWeight: "700", marginBottom: space.sm },
-  note: { color: colors.dim, fontSize: 11, marginTop: space.sm },
-});
+function Legend({ color, label }: { color: string; label: string }) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <View style={{ width: 10, height: 3, borderRadius: 2, backgroundColor: color, marginRight: 6 }} />
+      <Text style={[type.caption, { color: t.textSecondary }]}>{label}</Text>
+    </View>
+  );
+}

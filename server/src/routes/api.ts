@@ -93,11 +93,105 @@ apiRouter.get("/summary", async (req: any, res) => {
     at_risk: (by.critical?.n || 0) + (by.low_stock?.n || 0),
     critical: by.critical?.n || 0,
     low_stock: by.low_stock?.n || 0,
+    healthy: by.healthy?.n || 0,
     overstocked: by.overstocked?.n || 0,
+    no_demand: by.no_demand?.n || 0,
     revenue_at_risk: (by.critical?.rev || 0) + (by.low_stock?.rev || 0),
     ...(await variantCounts(req.storeId)),
+    kpis: await computeKpis(req.storeId, runDate),
   });
 });
+
+/**
+ * Inventory KPIs for the latest forecast run. All money figures are at
+ * retail price (unit cost is not synced from the platforms), and all
+ * stock-based figures exclude variants whose platform does not track stock.
+ *
+ *  - revenue_at_risk     sales lost in the 8-week horizon if at-risk SKUs are not reordered
+ *  - units_on_hand / inventory_value   stock currently held (retail value)
+ *  - sales_30d / sales_prev_30d        realised sales, for trend
+ *  - forecast_30d        projected demand for the next 30 days
+ *  - reorder_units/value suggested purchase for critical + low-stock SKUs
+ *  - overstock_units/value             stock beyond 120 days of forecast demand
+ *  - median_cover_days   typical days of stock across tracked SKUs with demand
+ *  - sell_through_30d    units sold in 30d / (sold + on hand)
+ *  - next_stockout       earliest projected stockout among at-risk SKUs
+ */
+async function computeKpis(storeId: number, runDate: string) {
+  const risk = await queryOne(
+    `WITH r AS (
+       SELECT sr.*, v.price, v.title, f.avg_daily_demand
+       FROM stock_risk sr
+       JOIN variants v ON v.id = sr.variant_id
+       LEFT JOIN forecasts f ON f.variant_id = sr.variant_id AND f.run_date = sr.run_date
+       WHERE sr.store_id = $1 AND sr.run_date = $2
+     )
+     SELECT
+       COUNT(*)::int AS forecasted,
+       COUNT(*) FILTER (WHERE risk_level <> 'untracked')::int AS tracked,
+       COUNT(*) FILTER (WHERE risk_level = 'healthy')::int AS healthy,
+       COALESCE(SUM(GREATEST(current_stock, 0)) FILTER (WHERE risk_level <> 'untracked'), 0)::int AS units_on_hand,
+       COALESCE(SUM(GREATEST(current_stock, 0) * COALESCE(price, 0)) FILTER (WHERE risk_level <> 'untracked'), 0)::float AS inventory_value,
+       COALESCE(SUM(reorder_qty) FILTER (WHERE risk_level IN ('critical','low_stock')), 0)::int AS reorder_units,
+       COALESCE(SUM(reorder_qty * COALESCE(price, 0)) FILTER (WHERE risk_level IN ('critical','low_stock')), 0)::float AS reorder_value,
+       COALESCE(SUM(GREATEST(current_stock - avg_daily_demand * 120, 0)) FILTER (WHERE risk_level = 'overstocked'), 0)::float AS overstock_units,
+       COALESCE(SUM(GREATEST(current_stock - avg_daily_demand * 120, 0) * COALESCE(price, 0)) FILTER (WHERE risk_level = 'overstocked'), 0)::float AS overstock_value,
+       percentile_cont(0.5) WITHIN GROUP (ORDER BY days_of_stock)
+         FILTER (WHERE days_of_stock IS NOT NULL AND risk_level <> 'untracked') AS median_cover_days,
+       MIN(stockout_date) FILTER (WHERE risk_level IN ('critical','low_stock')) AS next_stockout_date
+     FROM r`,
+    [storeId, runDate]
+  );
+  const nextOut = risk?.next_stockout_date
+    ? await queryOne(
+        `SELECT v.title, v.sku FROM stock_risk sr JOIN variants v ON v.id = sr.variant_id
+         WHERE sr.store_id = $1 AND sr.run_date = $2 AND sr.stockout_date = $3
+           AND sr.risk_level IN ('critical','low_stock')
+         ORDER BY sr.revenue_at_risk DESC NULLS LAST LIMIT 1`,
+        [storeId, runDate, risk.next_stockout_date]
+      )
+    : null;
+  const fc = await queryOne(
+    `SELECT COALESCE(SUM(d.y), 0)::float AS units,
+            COALESCE(SUM(d.y * COALESCE(v.price, 0)), 0)::float AS revenue
+     FROM forecasts f
+     JOIN variants v ON v.id = f.variant_id
+     CROSS JOIN LATERAL (
+       SELECT SUM((e->>'y')::numeric) AS y
+       FROM jsonb_array_elements(f.daily_forecast) WITH ORDINALITY AS t(e, i)
+       WHERE i <= 30
+     ) d
+     WHERE f.store_id = $1 AND f.run_date = $2`,
+    [storeId, runDate]
+  );
+  const sales = await queryOne(
+    `SELECT
+       COALESCE(SUM(units_sold) FILTER (WHERE sale_date >= CURRENT_DATE - 30), 0)::int AS units_30,
+       COALESCE(SUM(revenue)    FILTER (WHERE sale_date >= CURRENT_DATE - 30), 0)::float AS revenue_30,
+       COALESCE(SUM(units_sold) FILTER (WHERE sale_date <  CURRENT_DATE - 30), 0)::int AS units_prev,
+       COALESCE(SUM(revenue)    FILTER (WHERE sale_date <  CURRENT_DATE - 30), 0)::float AS revenue_prev
+     FROM daily_sales WHERE store_id = $1 AND sale_date >= CURRENT_DATE - 60`,
+    [storeId]
+  );
+  const units30 = sales?.units_30 ?? 0;
+  const onHand = risk?.units_on_hand ?? 0;
+  return {
+    healthy_pct: risk?.tracked ? Math.round((100 * risk.healthy) / risk.tracked) : null,
+    units_on_hand: onHand,
+    inventory_value: risk?.inventory_value ?? 0,
+    reorder_units: risk?.reorder_units ?? 0,
+    reorder_value: risk?.reorder_value ?? 0,
+    overstock_units: Math.round(risk?.overstock_units ?? 0),
+    overstock_value: risk?.overstock_value ?? 0,
+    median_cover_days: risk?.median_cover_days != null ? Math.round(Number(risk.median_cover_days)) : null,
+    next_stockout_date: risk?.next_stockout_date ?? null,
+    next_stockout_title: nextOut?.title ?? null,
+    sales_30d: { units: units30, revenue: sales?.revenue_30 ?? 0 },
+    sales_prev_30d: { units: sales?.units_prev ?? 0, revenue: sales?.revenue_prev ?? 0 },
+    forecast_30d: { units: Math.round(fc?.units ?? 0), revenue: fc?.revenue ?? 0 },
+    sell_through_30d: units30 + onHand > 0 ? Math.round((100 * units30) / (units30 + onHand)) : null,
+  };
+}
 
 /** GET /api/risks?level=critical,low_stock&q=air&limit=50&offset=0 */
 apiRouter.get("/risks", async (req: any, res) => {

@@ -11,6 +11,23 @@ export interface StoreInfo {
   sync_error: string | null;
 }
 
+export interface Kpis {
+  healthy_pct: number | null;
+  units_on_hand: number;
+  inventory_value: number;
+  reorder_units: number;
+  reorder_value: number;
+  overstock_units: number;
+  overstock_value: number;
+  median_cover_days: number | null;
+  next_stockout_date: string | null;
+  next_stockout_title: string | null;
+  sales_30d: { units: number; revenue: number };
+  sales_prev_30d: { units: number; revenue: number };
+  forecast_30d: { units: number; revenue: number };
+  sell_through_30d: number | null;
+}
+
 export interface Summary {
   ready: boolean;
   run_date?: string;
@@ -20,8 +37,11 @@ export interface Summary {
   at_risk?: number;
   critical?: number;
   low_stock?: number;
+  healthy?: number;
   overstocked?: number;
+  no_demand?: number;
   revenue_at_risk?: number;
+  kpis?: Kpis;
   // present while there is no forecast yet
   forecast_job?: "queued" | "running" | "done" | "error" | null;
   forecast_error?: string | null;

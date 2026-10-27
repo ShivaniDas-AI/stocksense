@@ -1,15 +1,15 @@
 import React from "react";
-import { Text } from "react-native";
-import { DarkTheme, NavigationContainer } from "@react-navigation/native";
+import { DarkTheme, DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "./auth/AuthContext";
 import { ConnectScreen } from "./screens/ConnectScreen";
 import { DashboardScreen } from "./screens/DashboardScreen";
 import { ProductScreen } from "./screens/ProductScreen";
 import { AlertsScreen } from "./screens/AlertsScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
-import { colors } from "./theme";
+import { useTheme } from "./theme";
 
 export type RootStackParamList = {
   Tabs: undefined;
@@ -20,36 +20,31 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
-const theme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    primary: colors.green,
-    background: colors.bg,
-    card: colors.panel,
-    text: colors.text,
-    border: colors.line,
-    notification: colors.red,
-  },
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
+const TAB_ICONS: Record<string, { on: IconName; off: IconName }> = {
+  Dashboard: { on: "grid", off: "grid-outline" },
+  Alerts: { on: "notifications", off: "notifications-outline" },
+  Settings: { on: "settings", off: "settings-outline" },
 };
 
-function TabIcon({ glyph, color }: { glyph: string; color: string }) {
-  return <Text style={{ color, fontSize: 18 }}>{glyph}</Text>;
-}
-
 function Tabs() {
+  const t = useTheme();
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.green,
-        tabBarInactiveTintColor: colors.dim,
-        tabBarStyle: { backgroundColor: colors.panel, borderTopColor: colors.line },
-      }}
+        tabBarActiveTintColor: t.primary,
+        tabBarInactiveTintColor: t.textMuted,
+        tabBarStyle: { backgroundColor: t.surface, borderTopColor: t.border },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarIcon: ({ color, focused, size }) => (
+          <Ionicons name={focused ? TAB_ICONS[route.name].on : TAB_ICONS[route.name].off} size={size} color={color} />
+        ),
+      })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarIcon: ({ color }) => <TabIcon glyph="▦" color={color} /> }} />
-      <Tab.Screen name="Alerts" component={AlertsScreen} options={{ tabBarIcon: ({ color }) => <TabIcon glyph="▲" color={color} /> }} />
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: ({ color }) => <TabIcon glyph="⚙" color={color} /> }} />
+      <Tab.Screen name="Dashboard" component={DashboardScreen} />
+      <Tab.Screen name="Alerts" component={AlertsScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }
@@ -62,20 +57,28 @@ function ConnectRoute({ navigation }: { navigation: { goBack: () => void; canGoB
 
 export function Navigation() {
   const { token } = useAuth();
+  const t = useTheme();
+  const base = t.dark ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...base,
+    colors: { ...base.colors, primary: t.primary, background: t.bg, card: t.surface, text: t.text, border: t.border, notification: t.danger },
+  };
   return (
-    <NavigationContainer theme={theme}>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator
         screenOptions={{
-          headerStyle: { backgroundColor: colors.panel },
-          headerTintColor: colors.text,
+          headerStyle: { backgroundColor: t.surface },
+          headerTintColor: t.text,
           headerTitleStyle: { fontWeight: "700" },
-          contentStyle: { backgroundColor: colors.bg },
+          headerShadowVisible: false,
+          headerBackButtonDisplayMode: "minimal",
+          contentStyle: { backgroundColor: t.bg },
         }}
       >
         {token ? (
           <>
             <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
-            <Stack.Screen name="Product" component={ProductScreen} options={({ route }) => ({ title: route.params.title || "Product" })} />
+            <Stack.Screen name="Product" component={ProductScreen} options={{ title: "Product" }} />
             <Stack.Screen name="Connect" component={ConnectRoute} options={{ title: "Add store" }} />
           </>
         ) : (

@@ -1,12 +1,12 @@
 import React from "react";
+import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { Navigation } from "./src/navigation";
 import { StatusView } from "./src/components/ui";
-import { View } from "react-native";
-import { colors } from "./src/theme";
+import { useTheme } from "./src/theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,14 +16,19 @@ const queryClient = new QueryClient({
 
 function Root() {
   const { ready } = useAuth();
-  if (!ready) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        <StatusView title="StockSense" spinner />
-      </View>
-    );
-  }
-  return <Navigation />;
+  const t = useTheme();
+  return (
+    <>
+      <StatusBar style={t.dark ? "light" : "dark"} />
+      {ready ? (
+        <Navigation />
+      ) : (
+        <View style={{ flex: 1, backgroundColor: t.bg }}>
+          <StatusView title="StockSense" spinner />
+        </View>
+      )}
+    </>
+  );
 }
 
 export default function App() {
@@ -31,7 +36,6 @@ export default function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <StatusBar style="light" />
           <Root />
         </AuthProvider>
       </QueryClientProvider>

@@ -5,8 +5,8 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#070b12",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F4F6F9",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.stocksense.app"
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.stocksense.app",
       "adaptiveIcon": {
-        "backgroundColor": "#070b12",
+        "backgroundColor": "#1D4ED8",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

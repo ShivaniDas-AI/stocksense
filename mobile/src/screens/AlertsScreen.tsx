@@ -1,74 +1,66 @@
 import React from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { RiskBadge, StatusView } from "../components/ui";
-import { colors, radius, space } from "../theme";
+import { Card, RiskBadge, ScreenHeader, StatusView } from "../components/ui";
+import { radius, riskMeta, space, tone, type, useTheme } from "../theme";
 
 export function AlertsScreen() {
+  const t = useTheme();
   const qc = useQueryClient();
   const alerts = useQuery({ queryKey: ["alerts"], queryFn: api.alerts });
   const ack = useMutation({
     mutationFn: (id: string) => api.ackAlert(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
   });
+  const items = alerts.data?.items ?? [];
+  const open = items.filter((a) => !a.acknowledged).length;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
-      <Text style={styles.heading}>Alerts</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
       {alerts.isError ? (
-        <StatusView title="Could not load alerts" body={(alerts.error as Error).message} error />
+        <StatusView icon="alert-circle-outline" toneName="danger" title="Could not load alerts" body={(alerts.error as Error).message} />
       ) : (
         <FlatList
-          data={alerts.data?.items ?? []}
+          data={items}
           keyExtractor={(a) => a.id}
-          contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={alerts.isFetching} onRefresh={() => { alerts.refetch(); }} tintColor={colors.green} />}
+          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl * 2 }}
+          ListHeaderComponent={<ScreenHeader title="Alerts" subtitle={open ? `${open} need attention` : "All caught up"} />}
+          refreshControl={<RefreshControl refreshing={alerts.isFetching} onRefresh={() => { alerts.refetch(); }} tintColor={t.primary} colors={[t.primary]} />}
           ListEmptyComponent={
             alerts.isLoading ? undefined : (
-              <Text style={styles.empty}>No alerts yet. The daily digest logs critical and low-stock items here.</Text>
+              <StatusView icon="notifications-off-outline" toneName="success" title="No alerts yet" body="The daily digest logs critical and low-stock products here, once a day, so you are not alerted twice for the same item." />
             )
           }
-          renderItem={({ item }) => (
-            <View style={[styles.row, item.acknowledged && { opacity: 0.55 }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.sub}>
-                  {item.sku ? `${item.sku} · ` : ""}
-                  {new Date(item.sent_at).toLocaleString()}
-                </Text>
-                <View style={{ marginTop: 6 }}>
-                  <RiskBadge level={item.risk_level} />
+          renderItem={({ item }) => {
+            const meta = riskMeta[item.risk_level] ?? riskMeta.no_demand;
+            const c = tone(t, meta.tone);
+            return (
+              <Card style={{ padding: space.md, marginBottom: space.sm, flexDirection: "row", alignItems: "center", opacity: item.acknowledged ? 0.6 : 1 }}>
+                <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: c.bg, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+                  <Ionicons name={item.risk_level === "critical" ? "alert" : "warning-outline"} size={19} color={c.fg} />
                 </View>
-              </View>
-              {!item.acknowledged ? (
-                <Pressable onPress={() => ack.mutate(item.id)} style={styles.ack}>
-                  <Text style={styles.ackText}>Got it</Text>
-                </Pressable>
-              ) : (
-                <Text style={styles.done}>seen</Text>
-              )}
-            </View>
-          )}
+                <View style={{ flex: 1 }}>
+                  <Text style={[type.bodyStrong, { color: t.text }]} numberOfLines={1}>{item.title}</Text>
+                  <Text style={[type.caption, { color: t.textMuted }]} numberOfLines={1}>
+                    {item.sku ? `${item.sku} · ` : ""}{new Date(item.sent_at).toLocaleDateString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </Text>
+                  <View style={{ marginTop: 6 }}><RiskBadge level={item.risk_level} /></View>
+                </View>
+                {item.acknowledged ? (
+                  <Ionicons name="checkmark-circle" size={22} color={t.success} />
+                ) : (
+                  <Pressable onPress={() => ack.mutate(item.id)} style={{ borderWidth: 1, borderColor: t.border, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8 }}>
+                    <Text style={{ color: t.primary, fontWeight: "700", fontSize: 13 }}>Dismiss</Text>
+                  </Pressable>
+                )}
+              </Card>
+            );
+          }}
         />
       )}
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  heading: { color: colors.text, fontSize: 20, fontWeight: "800", paddingHorizontal: space.lg, paddingTop: space.md },
-  list: { padding: space.lg },
-  row: {
-    flexDirection: "row", alignItems: "center", backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line,
-    borderRadius: radius.md, padding: space.md, marginBottom: space.sm,
-  },
-  title: { color: colors.text, fontWeight: "700" },
-  sub: { color: colors.dim, fontSize: 11, marginTop: 2 },
-  ack: { borderWidth: 1, borderColor: colors.green, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 8 },
-  ackText: { color: colors.green, fontWeight: "700", fontSize: 12 },
-  done: { color: colors.dim, fontSize: 12 },
-  empty: { color: colors.dim, textAlign: "center", padding: space.xl, lineHeight: 20 },
-});
