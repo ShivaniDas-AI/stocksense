@@ -54,8 +54,10 @@ function Tabs() {
   );
 }
 
-function ConnectRoute({ navigation }: { navigation: { goBack: () => void } }) {
-  return <ConnectScreen onDone={() => navigation.goBack()} />;
+function ConnectRoute({ navigation }: { navigation: { goBack: () => void; canGoBack: () => boolean } }) {
+  // First login: signing in swaps the navigator to the tabs, so there is no
+  // screen to go back to. "Add another store" from Settings does have one.
+  return <ConnectScreen onDone={() => { if (navigation.canGoBack()) navigation.goBack(); }} />;
 }
 
 export function Navigation() {
