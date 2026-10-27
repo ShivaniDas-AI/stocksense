@@ -27,6 +27,7 @@ export function SettingsScreen() {
   const switchStore = useMutation({
     mutationFn: (id: string) => api.switchStore(id),
     onSuccess: async (r) => { await signIn(r.token); qc.clear(); },
+    onError: (e: any) => Alert.alert("Could not switch store", e?.message || "Please try again."),
   });
 
   async function saveUrl() {

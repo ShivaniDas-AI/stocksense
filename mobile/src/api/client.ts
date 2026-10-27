@@ -30,10 +30,10 @@ export function configureApi(opts: { baseUrl?: string; token?: string | null }) 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     Accept: "application/json",
-    // ngrok's free tier shows an HTML warning page to clients without this.
-    "ngrok-skip-browser-warning": "true",
     ...(init.headers as Record<string, string> | undefined),
   };
+  // ngrok's free tier shows an HTML warning page to clients without this.
+  if (/ngrok/i.test(baseUrl)) headers["ngrok-skip-browser-warning"] = "true";
   if (init.body) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
 

@@ -31,8 +31,11 @@ function parseSession(token: string | undefined): Session | null {
   if (!token) return null;
   try {
     const p = jwt.verify(token, config.sessionSecret) as any;
-    const stores: number[] = Array.isArray(p.stores) ? p.stores : [p.storeId];
-    return { storeId: p.storeId, stores };
+    // Postgres returns bigint ids as strings; normalise so comparisons in
+    // /auth/switch work whatever type was signed into the token.
+    const raw: any[] = Array.isArray(p.stores) ? p.stores : [p.storeId];
+    const stores = raw.map(Number).filter((n) => Number.isFinite(n));
+    return { storeId: Number(p.storeId), stores };
   } catch {
     return null;
   }
@@ -58,10 +61,11 @@ function writeSession(res: any, session: Session): string {
 }
 
 /** Make storeId the active store and remember it alongside earlier ones. */
-export function setSession(req: any, res: any, storeId: number): string {
+export function setSession(req: any, res: any, storeId: number | string): string {
+  const id = Number(storeId);
   const prev = getSession(req);
-  const stores = Array.from(new Set([...(prev?.stores ?? []), storeId]));
-  return writeSession(res, { storeId, stores });
+  const stores = Array.from(new Set([...(prev?.stores ?? []), id]));
+  return writeSession(res, { storeId: id, stores });
 }
 
 export function getSessionStoreId(req: any): number | null {
