@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StockSense</title>
+<meta name="theme-color" content="#070b12">
+<link rel="manifest" href="/dashboard/manifest.webmanifest" crossorigin="use-credentials">
+<link rel="icon" href="/dashboard/icon-192.png">
+<link rel="apple-touch-icon" href="/dashboard/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --bg:#070b12; --panel:#0c1420; --panel2:#101b2a; --line:#1a2940;
+    --text:#e8eef7; --dim:#8295ad; --green:#2ee88a; --green-dim:#153826;
+    --red:#ff5a5a; --amber:#ffb020; --blue:#4aa3ff; --purple:#b48aff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  a{color:var(--green);text-decoration:none}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+  .logo{font-weight:800;letter-spacing:.5px;font-size:17px}
+  .logo em{color:var(--green);font-style:normal}
+  .pill{font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+  .pill.live{color:var(--green);border-color:var(--green-dim)}
+  .hdr-actions{display:flex;gap:8px}
+  .hbtn{font-size:13px;color:var(--text);border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 12px;white-space:nowrap}
+  .hbtn:hover{border-color:var(--green);color:var(--green)}
+  .storebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .store-select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;max-width:100%}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .card .k{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+  .card .v{font-size:26px;font-weight:800;margin-top:4px}
+  .card .s{font-size:12px;color:var(--dim);margin-top:2px}
+  .v.green{color:var(--green)} .v.red{color:var(--red)} .v.amber{color:var(--amber)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 12px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .tab{border:1px solid var(--line);background:var(--panel);color:var(--dim);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:13px}
+  .tab.on{color:#07140c;background:var(--green);border-color:var(--green);font-weight:700}
+  input[type=search]{flex:1;min-width:180px;background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:8px 12px;outline:none}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:13px}
+  th{color:var(--dim);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.5px;background:var(--panel2)}
+  tr.row{cursor:pointer} tr.row:hover{background:var(--panel2)}
+  td.num,th.num{text-align:right}
+  .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700}
+  .b-critical{background:#3a1420;color:var(--red)} .b-low_stock{background:#39290f;color:var(--amber)}
+  .b-healthy{background:var(--green-dim);color:var(--green)} .b-overstocked{background:#1c2340;color:var(--blue)}
+  .b-no_demand{background:#1a1f2a;color:var(--dim)}
+  .b-untracked{background:#2a1f3d;color:var(--purple)}
+  .empty{padding:40px;text-align:center;color:var(--dim)}
+  .notice{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--purple);border-radius:10px;padding:10px 14px;margin:14px 0 0;font-size:13px;color:var(--dim)}
+  .notice b{color:var(--text)}
+  .syncing.err{color:var(--red)} .syncing.err b{color:var(--red)}
+  .syncing .small{font-size:12px;margin-top:8px}
+  /* drawer */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none}
+  .overlay.on{display:block}
+  .drawer{position:fixed;top:0;right:-560px;width:min(560px,100%);height:100%;background:var(--panel);border-left:1px solid var(--line);transition:right .25s;overflow-y:auto;z-index:10;padding:20px}
+  .drawer.on{right:0}
+  .drawer h2{font-size:18px;margin-bottom:2px}
+  .drawer .sub{color:var(--dim);font-size:12px;margin-bottom:14px}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+  .kv .card{padding:10px 12px} .kv .v{font-size:18px}
+  .chart{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--dim);margin-top:6px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+  .settings{display:flex;gap:10px;align-items:end;margin-top:12px;flex-wrap:wrap}
+  .settings label{font-size:11px;color:var(--dim);display:block;margin-bottom:4px}
+  .settings input{width:110px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:8px 10px}
+  button.primary{background:var(--green);color:#07140c;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer}
+  button.ghost{background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:8px;padding:9px 14px;cursor:pointer}
+  .close{position:absolute;top:14px;right:16px;font-size:20px;color:var(--dim);cursor:pointer;background:none;border:none}
+  .note{font-size:12px;color:var(--dim);margin-top:6px}
+  .syncing{margin:40px auto;text-align:center;color:var(--dim)}
+  .spinner{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;margin:0 auto 12px;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* ---------- phone layout ---------- */
+  header{flex-wrap:wrap;gap:8px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  @media (max-width:640px){
+    .wrap{padding:12px}
+    .pill{font-size:11px;padding:2px 8px}
+    header > div{flex-wrap:wrap}
+    .cards{grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+    .card{padding:10px 12px}
+    .card .v{font-size:20px}
+    .card .s{font-size:11px}
+    .tabs{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:2px}
+    .tab{white-space:nowrap}
+    input[type=search]{min-width:0;width:100%}
+    table{background:transparent;border:0}
+    table thead{display:none}
+    table,tbody,tr.row,tr.row td{display:block;width:100%}
+    tr.row{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+    tr.row td{border:0;padding:4px 0;display:flex;justify-content:space-between;gap:12px;text-align:right}
+    tr.row td::before{content:attr(data-label);color:var(--dim);font-size:12px;text-align:left}
+    tr.row td.prod{display:block;text-align:left;padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:4px}
+    tr.row td.prod::before{content:none}
+    .kv{grid-template-columns:1fr 1fr}
+    .drawer{padding:16px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">STOCK<em>SENSE</em></div>
+    <div class="hdr-actions">
+      <a class="hbtn" href="/">+ Add store</a>
+      <a class="hbtn" href="/auth/logout">Log out</a>
+    </div>
+  </header>
+  <div class="storebar">
+    <select id="storeSel" class="store-select" aria-label="Store"><option>loading...</option></select>
+    <span class="pill live" id="runPill" style="display:none"></span>
+  </div>
+
+  <div id="syncing" class="syncing" style="display:none"></div>
+
+  <div id="main" style="display:none">
+    <div class="notice" id="notice" style="display:none"></div>
+    <div class="cards">
+      <div class="card"><div class="k">SKUs tracked</div><div class="v" id="cSkus">-</div><div class="s" id="cModel">AI forecast, 8-week horizon</div></div>
+      <div class="card"><div class="k">At-risk items</div><div class="v amber" id="cRisk">-</div><div class="s" id="cRiskSub">-</div></div>
+      <div class="card"><div class="k">Critical</div><div class="v red" id="cCrit">-</div><div class="s">stockout before reorder can arrive</div></div>
+      <div class="card"><div class="k">Revenue at risk</div><div class="v green" id="cRev">-</div><div class="s">next 8 weeks if not reordered</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="tabs" id="tabs">
+        <button class="tab on" data-level="critical,low_stock">At risk</button>
+        <button class="tab" data-level="critical">Critical</button>
+        <button class="tab" data-level="healthy">Healthy</button>
+        <button class="tab" data-level="overstocked">Overstocked</button>
+        <button class="tab" data-level="untracked" id="tabUntracked" style="display:none">Untracked</button>
+        <button class="tab" data-level="critical,low_stock,healthy,overstocked,no_demand,untracked">All</button>
+      </div>
+      <input type="search" id="search" placeholder="Search by name or SKU...">
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Product</th><th>Risk</th>
+        <th class="num">Stock</th><th class="num">Avg/day</th>
+        <th class="num">Cover</th><th>Stockout</th>
+        <th class="num">Reorder qty</th><th class="num">Rev at risk</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+    <div class="empty" id="empty" style="display:none">No SKUs in this view.</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <button class="close" id="dClose">&times;</button>
+  <h2 id="dTitle">-</h2>
+  <div class="sub" id="dSub">-</div>
+  <div class="kv">
+    <div class="card"><div class="k">Current stock</div><div class="v" id="dStock">-</div></div>
+    <div class="card"><div class="k">Days of cover</div><div class="v" id="dCover">-</div></div>
+    <div class="card"><div class="k">Projected stockout</div><div class="v" id="dOut">-</div></div>
+    <div class="card"><div class="k">Suggested reorder</div><div class="v green" id="dQty">-</div></div>
+  </div>
+  <div class="chart">
+    <canvas id="chart" width="520" height="220" style="width:100%"></canvas>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--blue)"></span>Sales (90d)</span>
+      <span><span class="dot" style="background:var(--green)"></span>Forecast (8w)</span>
+      <span id="dModel"></span>
+    </div>
+  </div>
+  <div class="settings">
+    <div><label>Lead time (days)</label><input type="number" id="dLead" min="1"></div>
+    <div><label>Safety stock (units)</label><input type="number" id="dSafety" min="0"></div>
+    <button class="primary" id="dSave">Save</button>
+  </div>
+  <div class="note">Changes apply from the next nightly forecast run.</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let state = { level: "critical,low_stock", q: "", currency: "USD", currentVariant: null };
+
+const fmtMoney = (n) => new Intl.NumberFormat(undefined,{style:"currency",currency:state.currency,maximumFractionDigits:0}).format(n||0);
+const fmtNum = (n) => n==null ? "-" : Number(n).toLocaleString();
+const fmtRate = (n) => n==null ? "-" : (Number(n) < 1 ? Number(n).toFixed(2) : Number(n).toFixed(1));
+// Dates come as "YYYY-MM-DD" (or an ISO timestamp); show them as local calendar dates without timezone shifts.
+const ymd = (v) => v ? String(v).slice(0,10) : "";
+const fmtDate = (v) => { if(!v) return "-"; const [y,m,d] = ymd(v).split("-").map(Number); return new Date(y, m-1, d).toLocaleDateString(); };
+
+async function loadStores(){
+  const r = await fetch("/auth/stores");
+  if(!r.ok) throw new Error("not signed in");
+  const d = await r.json();
+  const sel = $("storeSel");
+  sel.innerHTML = "";
+  for(const s of d.stores){
+    const o = document.createElement("option");
+    o.value = s.id; o.textContent = s.platform + " · " + s.store_domain;
+    if(s.id === d.active) o.selected = true;
+    sel.appendChild(o);
+  }
+}
+$("storeSel").onchange = async (e) => {
+  await fetch("/auth/switch", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({store_id: Number(e.target.value)})});
+  location.reload();
+};
+
+async function api(path, opts){ const r = await fetch("/api"+path, opts); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+
+const PLATFORM_NAME = { shopify: "Shopify", bigcommerce: "BigCommerce", woocommerce: "WooCommerce" };
+const TRACKING_HINT = {
+  shopify: "Shopify admin &gt; Products &gt; (product) &gt; Inventory &gt; tick <b>Track quantity</b>",
+  bigcommerce: "BigCommerce control panel &gt; Products &gt; (product) &gt; Inventory &gt; <b>Track inventory</b>",
+  woocommerce: "WooCommerce &gt; Products &gt; (product) &gt; Inventory &gt; tick <b>Manage stock</b>",
+};
+let platform = "";
+
+// Full-page status (spinner or error) shown instead of the dashboard.
+function showStatus(title, body, opts){
+  const o = opts || {};
+  $("main").style.display = "none";
+  const el = $("syncing");
+  el.className = "syncing" + (o.error ? " err" : "");
+  el.style.display = "block";
+  el.innerHTML = (o.spinner ? "<div class='spinner'></div>" : "") +
+    "<div><b>" + title + "</b></div><div>" + body + "</div>" +
+    (o.small ? "<div class='small'>" + o.small + "</div>" : "");
+  if (o.retry) setTimeout(boot, o.retry);
+}
+
+async function boot(){
+  try{
+    const store = await api("/store");
+    state.currency = store.currency || "USD";
+    platform = store.platform || "";
+    await loadStores();
+    if (store.sync_status === "error"){
+      showStatus("Store sync failed.",
+        esc(store.sync_error || "The store could not be synced.") +
+        "<br>Check the store credentials and <a href='/'>reconnect the store</a>.",
+        { error: true });
+      return;
+    }
+    if (store.sync_status === "uninstalled"){
+      showStatus("This store was disconnected.",
+        "The app was uninstalled from the store. <a href='/'>Connect it again</a> to resume forecasting.",
+        { error: true });
+      return;
+    }
+    if (store.sync_status !== "ready"){
+      showStatus("Syncing your store...",
+        "Pulling products, inventory and order history. This usually takes under a minute.<br>This page refreshes automatically.",
+        { spinner: true, retry: 8000 });
+      return;
+    }
+    $("syncing").style.display="none";
+    $("main").style.display="block";
+    await loadSummary();
+    await loadRows();
+  }catch(e){
+    $("storeSel").innerHTML = "<option>not signed in</option>";
+    showStatus("Not connected.", "Install the app from your store admin, or open the <a href='/'>connect page</a>.");
+  }
+}
+
+async function loadSummary(){
+  const s = await api("/summary");
+  if(!s.ready){
+    const job = s.forecast_job;
+    if (job === "queued" || job === "running"){
+      showStatus("Store synced. Running your first forecast...",
+        "This takes a minute or two. The page refreshes automatically.",
+        { spinner: true, retry: 10000 });
+    } else if (job === "error"){
+      showStatus("Forecast failed.",
+        esc(s.forecast_error || "The forecast worker reported an error."),
+        { error: true, small: "Check the worker logs, then reconnect the store to retry. This page refreshes automatically.", retry: 60000 });
+    } else if (job === "done" && !s.has_sales){
+      showStatus("Store synced, but no orders were found.",
+        "StockSense forecasts from your order history, and this store has no paid orders in the backfill window (last 18 months).<br>" +
+        "Once orders come in they are picked up within a few minutes and forecast nightly.",
+        { retry: 60000 });
+    } else if (job === "done"){
+      showStatus("Forecast ran, but produced no results.",
+        "No product with sales in the last 12 months could be forecast. This page refreshes automatically.",
+        { retry: 60000 });
+    } else {
+      showStatus("Store synced.",
+        "Waiting for the first forecast run (nightly at 02:00 UTC). Check back soon.",
+        { spinner: true, retry: 30000 });
+    }
+    return;
+  }
+  $("runPill").style.display="inline";
+  $("runPill").textContent = "forecast " + ymd(s.run_date);
+  $("cSkus").textContent = fmtNum(s.skus_tracked);
+  $("cModel").textContent = s.untracked ? s.untracked + " more forecasted without stock tracking" : "AI forecast, 8-week horizon";
+  $("cRisk").textContent = fmtNum(s.at_risk);
+  $("cRiskSub").textContent = s.critical + " critical · " + s.low_stock + " low stock";
+  $("cCrit").textContent = fmtNum(s.critical);
+  $("cRev").textContent = fmtMoney(s.revenue_at_risk);
+
+  // Explain untracked products: we can forecast their demand but not their stock.
+  const n = $("notice");
+  if (s.untracked > 0){
+    const pname = PLATFORM_NAME[platform] || "your store";
+    n.style.display = "block";
+    n.innerHTML = "<b>" + s.untracked + " of " + s.skus_forecasted + " forecasted products</b> have inventory tracking turned off in " + pname +
+      ", so their stock level, days of cover and stockout date are unknown. They are listed under <b>Untracked</b> with a demand forecast and reorder quantity." +
+      (TRACKING_HINT[platform] ? "<br>To get risk levels for them, turn tracking on: " + TRACKING_HINT[platform] + ". The next sync picks it up." : "");
+    $("tabUntracked").style.display = "inline-block";
+    if (s.skus_tracked === 0 && state.level === "critical,low_stock"){
+      // Nothing can be at risk yet; open the tab that actually has rows.
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+      $("tabUntracked").classList.add("on");
+      state.level = "untracked";
+    }
+  } else {
+    n.style.display = "none";
+    $("tabUntracked").style.display = "none";
+  }
+}
+
+async function loadRows(){
+  const d = await api("/risks?level="+encodeURIComponent(state.level)+"&q="+encodeURIComponent(state.q));
+  const tb = $("rows"); tb.innerHTML = "";
+  $("empty").style.display = d.items.length ? "none" : "block";
+  for(const r of d.items){
+    const tr = document.createElement("tr");
+    tr.className = "row";
+    const untracked = r.risk_level === "untracked";
+    tr.innerHTML = `
+      <td class="prod"><b>${esc(r.title||"")}</b>${r.sku?`<div style="color:var(--dim);font-size:11px">${esc(r.sku)}</div>`:""}</td>
+      <td data-label="Risk"><span class="badge b-${r.risk_level}" title="${untracked?"Inventory tracking is off for this product in your store":""}">${r.risk_level.replace("_"," ")}</span></td>
+      <td class="num" data-label="Stock">${untracked ? "unknown" : fmtNum(r.current_stock)}</td>
+      <td class="num" data-label="Avg/day">${fmtRate(r.avg_daily_demand)}</td>
+      <td class="num" data-label="Cover">${r.days_of_stock!=null?Math.round(r.days_of_stock)+" d":"-"}</td>
+      <td data-label="Stockout">${fmtDate(r.stockout_date)}</td>
+      <td class="num" data-label="Reorder qty">${fmtNum(r.reorder_qty)}</td>
+      <td class="num" data-label="Rev at risk">${r.revenue_at_risk>0?fmtMoney(r.revenue_at_risk):"-"}</td>`;
+    tr.onclick = () => openDrawer(r.variant_id);
+    tb.appendChild(tr);
+  }
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ---------- drawer ---------- */
+async function openDrawer(vid){
+  const d = await api("/variants/"+vid);
+  state.currentVariant = vid;
+  $("dTitle").textContent = d.variant.title || d.variant.product_title;
+  const untracked = d.risk?.risk_level === "untracked" || !d.variant.track_inventory;
+  $("dSub").textContent = (d.variant.sku? "SKU "+d.variant.sku+" · " : "") + (d.forecast? "model: "+d.forecast.model_used : "no forecast yet") +
+    (untracked ? " · inventory not tracked in store" : "");
+  $("dStock").textContent = untracked ? "unknown" : fmtNum(d.risk?.current_stock ?? d.variant.current_stock);
+  $("dCover").textContent = d.risk?.days_of_stock!=null ? Math.round(d.risk.days_of_stock)+" days" : "-";
+  $("dOut").textContent = fmtDate(d.risk?.stockout_date);
+  $("dQty").textContent = fmtNum(d.risk?.reorder_qty ?? 0)+" units";
+  $("dLead").value = d.variant.lead_time_days;
+  $("dSafety").value = d.variant.safety_stock;
+  $("dModel").textContent = d.forecast ? "run "+ymd(d.forecast.run_date) : "";
+  drawChart(d.history||[], d.forecast? (typeof d.forecast.daily_forecast==="string"? JSON.parse(d.forecast.daily_forecast): d.forecast.daily_forecast) : []);
+  $("overlay").classList.add("on"); $("drawer").classList.add("on");
+}
+function closeDrawer(){ $("overlay").classList.remove("on"); $("drawer").classList.remove("on"); }
+$("overlay").onclick = closeDrawer; $("dClose").onclick = closeDrawer;
+
+$("dSave").onclick = async () => {
+  await api("/variants/"+state.currentVariant, {
+    method:"PATCH",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ lead_time_days: $("dLead").value, safety_stock: $("dSafety").value })
+  });
+  $("dSave").textContent = "Saved"; setTimeout(()=> $("dSave").textContent="Save", 1500);
+};
+
+function drawChart(history, forecast){
+  const c = $("chart"), ctx = c.getContext("2d");
+  const W = c.width, H = c.height, pad = 28;
+  ctx.clearRect(0,0,W,H);
+  const hist = history.map(h=>({x:new Date(h.sale_date), y:Number(h.units_sold)}));
+  const fc = forecast.map(f=>({x:new Date(f.d), y:Number(f.y)}));
+  const all = hist.concat(fc);
+  if(!all.length){ ctx.fillStyle="#8295ad"; ctx.fillText("No data yet", W/2-30, H/2); return; }
+  const xs = all.map(p=>p.x.getTime()), ys = all.map(p=>p.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y1 = Math.max(1, Math.max(...ys));
+  const X = t => pad + (W-2*pad) * (t-x0)/Math.max(1,(x1-x0));
+  const Y = v => H-pad - (H-2*pad) * (v/y1);
+  // grid
+  ctx.strokeStyle = "#1a2940"; ctx.lineWidth = 1;
+  for(let i=0;i<=4;i++){ const y = pad + i*(H-2*pad)/4;
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+    ctx.fillStyle="#8295ad"; ctx.font="10px sans-serif";
+    ctx.fillText(String(Math.round(y1*(1-i/4))), 4, y+3);
+  }
+  const line = (pts, color) => {
+    if(!pts.length) return;
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    pts.forEach((p,i)=> i? ctx.lineTo(X(p.x.getTime()),Y(p.y)) : ctx.moveTo(X(p.x.getTime()),Y(p.y)));
+    ctx.stroke();
+  };
+  line(hist, "#4aa3ff");
+  line(fc, "#2ee88a");
+  // divider "today"
+  if(fc.length){
+    const tx = X(fc[0].x.getTime());
+    ctx.strokeStyle="#334a6b"; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(tx,pad); ctx.lineTo(tx,H-pad); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+/* ---------- toolbar ---------- */
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+  t.classList.add("on");
+  state.level = t.dataset.level;
+  loadRows();
+});
+let qt; $("search").oninput = (e) => { clearTimeout(qt); qt = setTimeout(()=>{ state.q = e.target.value; loadRows(); }, 300); };
+
+boot();
+
+/* ---------- PWA: register service worker so the app installs on phones ---------- */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/dashboard/sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>

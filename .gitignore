@@ -1,0 +1,20 @@
+# Secrets: real API keys live here. Copy .env.example to .env locally.
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+server/dist/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

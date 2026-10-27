@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect your store — StockSense</title>
+<style>
+  :root{--bg:#070b12;--panel:#0c1420;--line:#1a2940;--text:#e8eef7;--dim:#8295ad;--green:#2ee88a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,Segoe UI,Roboto,Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
+  .box{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px}
+  h1{font-size:20px;margin-bottom:4px} h1 em{color:var(--green);font-style:normal}
+  p{color:var(--dim);margin-bottom:18px}
+  .opt{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+  .opt b{display:block;margin-bottom:6px}
+  input{width:100%;background:#101b2a;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:9px 12px;margin-bottom:8px;outline:none}
+  button{width:100%;background:var(--green);color:#07140c;border:0;border-radius:8px;padding:10px;font-weight:700;cursor:pointer}
+  .hint{font-size:12px;color:var(--dim);margin-top:6px}
+  .err{color:#ff5a5a;font-size:12px;margin-top:8px;display:none}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>STOCK<em>SENSE</em></h1>
+  <p>Connect your store to start forecasting stockouts.</p>
+  <p style="margin-top:-10px"><a href="/dashboard/" id="backDash" style="display:none">&larr; Back to dashboard</a></p>
+
+  <div class="opt">
+    <b>Shopify</b>
+    <input id="shop" placeholder="your-store.myshopify.com">
+    <button onclick="location.href='/auth/shopify?shop='+encodeURIComponent(document.getElementById('shop').value.trim())">Connect Shopify</button>
+  </div>
+
+  <div class="opt">
+    <b>Shopify (custom app with access token)</b>
+    <input id="tshop" placeholder="your-store.myshopify.com">
+    <input id="ttoken" placeholder="Admin API access token (shpat_...)" type="password">
+    <button onclick="tokenConnect()">Connect with token</button>
+    <div class="hint">Store admin &gt; Settings &gt; Apps &gt; Develop apps &gt; your app &gt; API credentials.</div>
+    <div class="err" id="terr"></div>
+  </div>
+
+  <div class="opt">
+    <b>BigCommerce</b>
+    <div class="hint">Install StockSense from the BigCommerce App Marketplace, or via your draft app install link. You will land back here automatically.</div>
+  </div>
+
+  <div class="opt">
+    <b>BigCommerce (API account with access token)</b>
+    <input id="bhash" placeholder="Store hash (e.g. abc123xyz)">
+    <input id="btoken" placeholder="Access token" type="password">
+    <button onclick="bcTokenConnect()">Connect with token</button>
+    <div class="hint">Control panel &gt; Settings &gt; API &gt; Store-level API accounts. Needs Products and Orders read-only.</div>
+    <div class="err" id="berr"></div>
+  </div>
+
+  <div class="opt">
+    <b>WooCommerce</b>
+    <input id="wsite" placeholder="yourstore.com">
+    <input id="wkey" placeholder="Consumer key (ck_...)">
+    <input id="wsecret" placeholder="Consumer secret (cs_...)" type="password">
+    <button onclick="wooConnect()">Connect WooCommerce</button>
+    <div class="hint">WooCommerce &gt; Settings &gt; Advanced &gt; REST API &gt; Add key (Read access).</div>
+    <div class="err" id="werr"></div>
+  </div>
+</div>
+<script>
+// Show "Back to dashboard" only when this device already has a connected store.
+fetch('/auth/stores').then(r => { if(r.ok) document.getElementById('backDash').style.display='inline'; }).catch(()=>{});
+async function bcTokenConnect(){
+  const body = {
+    store_hash: document.getElementById('bhash').value.trim(),
+    access_token: document.getElementById('btoken').value.trim(),
+  };
+  const r = await fetch('/auth/bigcommerce/token-connect', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if(d.ok) location.href = d.redirect;
+  else { const e = document.getElementById('berr'); e.style.display='block'; e.textContent = d.error || 'Connection failed'; }
+}
+async function tokenConnect(){
+  const body = {
+    shop: document.getElementById('tshop').value.trim(),
+    access_token: document.getElementById('ttoken').value.trim(),
+  };
+  const r = await fetch('/auth/shopify/token-connect', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if(d.ok) location.href = d.redirect;
+  else { const e = document.getElementById('terr'); e.style.display='block'; e.textContent = d.error || 'Connection failed'; }
+}
+async function wooConnect(){
+  const body = {
+    site: document.getElementById('wsite').value.trim(),
+    consumer_key: document.getElementById('wkey').value.trim(),
+    consumer_secret: document.getElementById('wsecret').value.trim(),
+  };
+  const r = await fetch('/auth/woocommerce/connect', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if(d.ok) location.href = d.redirect;
+  else { const e = document.getElementById('werr'); e.style.display='block'; e.textContent = d.error || 'Connection failed'; }
+}
+</script>
+</body>
+</html>

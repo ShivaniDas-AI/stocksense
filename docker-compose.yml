@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: stocksense
+      POSTGRES_USER: stocksense
+      POSTGRES_PASSWORD: stocksense
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stocksense"]
+      interval: 5s
+      retries: 10
+
+  server:
+    build: ./server
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://stocksense:stocksense@db:5432/stocksense
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: ./worker
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://stocksense:stocksense@db:5432/stocksense
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  dbdata:
