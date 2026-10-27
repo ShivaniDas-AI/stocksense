@@ -43,7 +43,7 @@ export function ProductScreen({ route }: Props) {
     },
   });
 
-  if (detail.isLoading) return <StatusView title="Loading product" spinner />;
+  if (detail.isPending) return <StatusView title="Loading product" spinner />;
   if (detail.isError || !detail.data)
     return <StatusView icon="alert-circle-outline" toneName="danger" title="Could not load product" body={(detail.error as Error)?.message} />;
 

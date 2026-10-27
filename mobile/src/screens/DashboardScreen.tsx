@@ -62,7 +62,9 @@ export function DashboardScreen() {
   );
 
   /* ---------- status screens ---------- */
-  if (store.isLoading) return <Screen><StatusView title="Loading your store" spinner /></Screen>;
+  // isPending (not isLoading) also covers the instant after the cache is
+  // reset on connect / store switch, when there is no data and no fetch yet.
+  if (store.isPending) return <Screen><StatusView title="Loading your store" spinner /></Screen>;
   if (store.isError) {
     const status = (store.error as any)?.status;
     return (
@@ -77,15 +79,17 @@ export function DashboardScreen() {
       </Screen>
     );
   }
-  const s = store.data!;
+  const s = store.data;
+  if (!s) return <Screen><StatusView title="Loading your store" spinner /></Screen>;
   if (s.sync_status === "error")
     return <Screen><StatusView icon="alert-circle-outline" toneName="danger" title="Store sync failed" body={s.sync_error || "The store could not be synced. Check the credentials and connect again."} action={<Button title="Connect again" variant="secondary" onPress={signOut} />} /></Screen>;
   if (s.sync_status === "uninstalled")
     return <Screen><StatusView icon="unlink-outline" toneName="warning" title="Store disconnected" body="The app was uninstalled from the store. Connect it again to resume forecasting." /></Screen>;
   if (!ready)
     return <Screen><StatusView spinner title="Syncing your store" body="Pulling products, inventory and order history. This usually takes under a minute." /></Screen>;
-  if (summary.isLoading) return <Screen><StatusView title="Loading forecast" spinner /></Screen>;
-  if (summary.data && !summary.data.ready) {
+  if (summary.isPending || !summary.data) return <Screen><StatusView title="Loading forecast" spinner /></Screen>;
+  if (summary.isError) return <Screen><StatusView icon="cloud-offline-outline" toneName="danger" title="Could not load the forecast" body={(summary.error as Error).message} action={<Button title="Try again" variant="secondary" icon="refresh" onPress={() => summary.refetch()} />} /></Screen>;
+  if (!summary.data.ready) {
     const job = summary.data.forecast_job;
     if (job === "queued" || job === "running") return <Screen><StatusView spinner title="Running your first forecast" body="Your store is synced. The forecast takes a minute or two." /></Screen>;
     if (job === "error") return <Screen><StatusView icon="warning-outline" toneName="danger" title="Forecast failed" body={summary.data.forecast_error || "The forecast worker reported an error."} /></Screen>;
@@ -94,7 +98,7 @@ export function DashboardScreen() {
   }
 
   /* ---------- dashboard ---------- */
-  const sm = summary.data!;
+  const sm = summary.data;
   const k = sm.kpis;
   const salesDelta = k ? pctChange(k.sales_30d.revenue, k.sales_prev_30d.revenue) : null;
   const danger = tone(t, "danger");

@@ -51,7 +51,7 @@ export function ConnectScreen({ onDone }: { onDone?: () => void }) {
         : await api.connectWoo(wooSite.trim(), wooKey.trim(), wooSecret.trim());
       if (!r.ok || !r.token) throw new Error(r.error || "Connection failed");
       await signIn(r.token);
-      qc.clear();
+      await qc.resetQueries();
       onDone?.();
     } catch (e: any) {
       setError(e instanceof ApiError ? e.message : e?.message || "Connection failed");

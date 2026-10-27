@@ -26,7 +26,8 @@ export function SettingsScreen() {
   const stores = useQuery({ queryKey: ["stores"], queryFn: api.stores });
   const switchStore = useMutation({
     mutationFn: (id: string) => api.switchStore(id),
-    onSuccess: async (r) => { await signIn(r.token); qc.clear(); },
+    // Reset (not clear) so active screens refetch straight away for the new store.
+    onSuccess: async (r) => { await signIn(r.token); await qc.resetQueries(); },
     onError: (e: any) => Alert.alert("Could not switch store", e?.message || "Please try again."),
   });
 
@@ -108,7 +109,7 @@ export function SettingsScreen() {
             onPress={() =>
               Alert.alert("Log out?", "The store stays connected on the server. You can reconnect with the same token.", [
                 { text: "Cancel", style: "cancel" },
-                { text: "Log out", style: "destructive", onPress: () => { qc.clear(); signOut(); } },
+                { text: "Log out", style: "destructive", onPress: async () => { await signOut(); qc.clear(); } },
               ])
             }
           />
