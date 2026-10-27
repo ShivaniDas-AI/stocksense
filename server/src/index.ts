@@ -12,6 +12,28 @@ import { query } from "./db";
 
 const app = express();
 
+/**
+ * CORS for API clients that run in a browser (the mobile app's web build on
+ * localhost:8081, or any page on another origin). Auth is a bearer token, not
+ * a cookie, so the origin is reflected without credentials. The dashboard
+ * itself is same-origin and unaffected.
+ */
+app.use((req, res, next) => {
+  const origin = req.get("origin");
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Authorization, Content-Type, Accept, ngrok-skip-browser-warning"
+    );
+    res.setHeader("Access-Control-Max-Age", "600");
+  }
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
 // Shopify webhooks need the RAW body for HMAC verification — mount raw first.
 app.use("/webhooks/shopify", express.raw({ type: "application/json" }));
 app.use(express.json({ limit: "2mb" }));

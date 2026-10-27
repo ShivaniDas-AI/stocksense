@@ -1,11 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import * as SecureStore from "expo-secure-store";
 import { configureApi } from "../api/client";
 import { DEFAULT_API_URL } from "../config";
+import { storage } from "./storage";
 
 /**
  * Holds the server URL and the bearer token, persisted in the phone's secure
- * storage so the app opens straight to the dashboard next time.
+ * storage (or browser storage on web) so the app opens straight to the
+ * dashboard next time.
  */
 interface AuthState {
   ready: boolean;
@@ -28,10 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const [t, u] = await Promise.all([
-        SecureStore.getItemAsync(KEY_TOKEN),
-        SecureStore.getItemAsync(KEY_URL),
-      ]);
+      const [t, u] = await Promise.all([storage.get(KEY_TOKEN), storage.get(KEY_URL)]);
       const url = u || DEFAULT_API_URL;
       configureApi({ baseUrl: url, token: t });
       setToken(t);
@@ -41,20 +39,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (t: string) => {
-    await SecureStore.setItemAsync(KEY_TOKEN, t);
+    await storage.set(KEY_TOKEN, t);
     configureApi({ token: t });
     setToken(t);
   }, []);
 
   const signOut = useCallback(async () => {
-    await SecureStore.deleteItemAsync(KEY_TOKEN);
+    await storage.remove(KEY_TOKEN);
     configureApi({ token: null });
     setToken(null);
   }, []);
 
   const setApiUrl = useCallback(async (url: string) => {
     const clean = url.trim().replace(/\/+$/, "");
-    await SecureStore.setItemAsync(KEY_URL, clean);
+    await storage.set(KEY_URL, clean);
     configureApi({ baseUrl: clean });
     setApiUrlState(clean);
   }, []);
