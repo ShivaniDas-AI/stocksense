@@ -19,6 +19,38 @@ PostgreSQL ──► Python forecast worker (statsforecast, nightly 02:00)
             Dashboard + daily email digest (Resend)
 ```
 
+## Tech Stack
+
+| Component | Language / Runtime | Frameworks & Key Libraries | Description |
+|---|---|---|---|
+| **Frontend (App / Dashboard)** | **HTML5, CSS3, JavaScript (ES6+)** | Vanilla JS, Canvas API, PWA (Service Worker) | Lightweight, responsive dashboard UI with interactive demand charts, store connection flows, and SKU drawer — zero build step required. |
+| **Backend Server & API** | **TypeScript (Node.js)** | Express.js, Axios, node-cron, pg (node-postgres), Resend | Multi-platform OAuth, webhook ingestion, data sync pipelines, REST API endpoints, session auth, and scheduled alert digests. |
+| **Forecast & ML Worker** | **Python 3** | StatsForecast (Nixtla), Pandas, NumPy, Psycopg2 | Background time-series prediction engine running AutoETS, Croston SBA, and moving average models to calculate stockout risks. |
+| **Database** | **SQL** | PostgreSQL 16 | Relational schema storing stores, product variants, daily aggregated sales, forecast outputs, and sync job queues. |
+| **DevOps & Infrastructure** | **YAML / Docker** | Docker, Docker Compose, ngrok / Cloudflare Tunnel | Containerized multi-service deployment (db + server + worker) with local tunnel support for webhooks. |
+
+### Languages & Frameworks by Component
+
+- **App / Frontend**:
+  - **Language**: **JavaScript (ES6+) / HTML5 / CSS3**
+  - **Framework / Libraries**: Vanilla (no external frontend framework required).
+  - **Highlights**: Built with pure HTML/CSS/JS for high performance and zero build complexity. Features custom CSS dark-mode design tokens, native HTML5 `<canvas>` charting for 90-day sales and 8-week forecast curves, responsive layout, and Progressive Web App (PWA) support (`manifest.webmanifest`, `sw.js`).
+
+- **Backend**:
+  - **Language**: **TypeScript** (running on **Node.js**)
+  - **Framework / Libraries**: **Express.js**, `pg` (PostgreSQL client), `axios` (platform API integrations), `jsonwebtoken` & `cookie-parser` (authentication), `node-cron` (scheduled syncs and alerts).
+  - **Highlights**: Handles Shopify / BigCommerce / WooCommerce OAuth flows, raw-body HMAC webhook validation, initial backfill and incremental sync engines, and REST endpoints for the dashboard.
+
+- **Forecasting & ML Worker**:
+  - **Language**: **Python 3**
+  - **Framework / Libraries**: **StatsForecast** (Nixtla), **Pandas**, **NumPy**, **Psycopg2**.
+  - **Highlights**: High-performance statistical time-series forecasting (AutoETS for seasonal demand, Croston SBA for intermittent demand, moving average for sparse history). Computes days of cover, projected stockout dates, reorder points, and revenue at risk.
+
+- **Database**:
+  - **Language**: **SQL**
+  - **Engine**: **PostgreSQL 16**
+  - **Highlights**: Relational data model (`schema.sql`) maintaining multi-tenant store records, products/variants, daily sales rollups, forecasts, risk assessments, and job queue status.
+
 ## Repo layout
 
 ```
@@ -73,6 +105,27 @@ DATABASE_URL=postgres://... python forecast_worker.py --loop
 #   0 2 * * *   DATABASE_URL=postgres://... python /path/to/forecast_worker.py
 #   * * * * *   DATABASE_URL=postgres://... python /path/to/forecast_worker.py --queued
 ```
+
+## Mobile app (`mobile/`)
+
+An Expo (React Native + TypeScript) app for Android and iOS that uses the same
+REST API as the dashboard. It signs in with a bearer token: the token-connect
+endpoints return `token` in their JSON, and the API accepts
+`Authorization: Bearer <token>` as well as the session cookie.
+
+```bash
+cd mobile && npm install
+npx expo start            # scan the QR code with the Expo Go app on your phone
+```
+
+- The server URL is in `mobile/src/config.ts` (the ngrok tunnel while the
+  server runs on your laptop) and can be changed in the app under Settings.
+- Screens: connect (BigCommerce / Shopify / WooCommerce token), dashboard
+  with summary cards, risk filters and search, product detail with the
+  sales + forecast chart and reorder settings, alerts, and settings with a
+  store switcher.
+- Installable build: `npm install -g eas-cli && eas build -p android --profile preview`
+  produces an APK through Expo's free build service.
 
 ## Platform app setup
 

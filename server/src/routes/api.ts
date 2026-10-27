@@ -4,7 +4,7 @@ import { getSessionStoreId } from "./auth";
 
 export const apiRouter = Router();
 
-/** Auth middleware: resolve store from session cookie (or ?store_id in dev). */
+/** Auth middleware: resolve store from the session cookie or Bearer token (or ?store_id in dev). */
 apiRouter.use((req: any, res, next) => {
   let storeId = getSessionStoreId(req);
   if (!storeId && process.env.NODE_ENV !== "production" && req.query.store_id) {

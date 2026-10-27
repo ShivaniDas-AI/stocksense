@@ -15,16 +15,19 @@ import { startInitialSync } from "../sync/sync";
 export const authRouter = Router();
 
 /**
- * Session cookie: signed JWT holding the active store and every store this
+ * Session: signed JWT holding the active store and every store this
  * browser/device has connected, so the user can switch between them.
+ *
+ * Browsers carry it in the ss_session cookie. The mobile app cannot use
+ * cookies, so the same JWT is also returned as `token` in the JSON of the
+ * connect/switch endpoints and accepted back as `Authorization: Bearer`.
  */
 interface Session {
   storeId: number;
   stores: number[];
 }
 
-export function getSession(req: any): Session | null {
-  const token = req.cookies?.ss_session;
+function parseSession(token: string | undefined): Session | null {
   if (!token) return null;
   try {
     const p = jwt.verify(token, config.sessionSecret) as any;
@@ -35,7 +38,15 @@ export function getSession(req: any): Session | null {
   }
 }
 
-function writeSession(res: any, session: Session) {
+export function getSession(req: any): Session | null {
+  const auth: string = req.get?.("authorization") || req.headers?.authorization || "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (m) return parseSession(m[1].trim());
+  return parseSession(req.cookies?.ss_session);
+}
+
+/** Sign the session, set it as a cookie, and return the token for API clients. */
+function writeSession(res: any, session: Session): string {
   const token = jwt.sign(session, config.sessionSecret, { expiresIn: "30d" });
   res.cookie("ss_session", token, {
     httpOnly: true,
@@ -43,13 +54,14 @@ function writeSession(res: any, session: Session) {
     secure: true,
     maxAge: 30 * 24 * 3600 * 1000,
   });
+  return token;
 }
 
 /** Make storeId the active store and remember it alongside earlier ones. */
-export function setSession(req: any, res: any, storeId: number) {
+export function setSession(req: any, res: any, storeId: number): string {
   const prev = getSession(req);
   const stores = Array.from(new Set([...(prev?.stores ?? []), storeId]));
-  writeSession(res, { storeId, stores });
+  return writeSession(res, { storeId, stores });
 }
 
 export function getSessionStoreId(req: any): number | null {
@@ -78,8 +90,8 @@ authRouter.post("/switch", (req, res) => {
   if (!s || !s.stores.includes(target)) {
     return res.status(403).json({ error: "Store not available on this device" });
   }
-  writeSession(res, { storeId: target, stores: s.stores });
-  res.json({ ok: true });
+  const token = writeSession(res, { storeId: target, stores: s.stores });
+  res.json({ ok: true, token });
 });
 
 // GET /auth/logout - forget all stores on this device.
@@ -174,9 +186,9 @@ authRouter.post("/bigcommerce/token-connect", async (req, res) => {
       store_hash: storeHash,
       access_token: token,
     });
-    setSession(req, res, store.id);
+    const session = setSession(req, res, store.id);
     startInitialSync(store.id);
-    res.json({ ok: true, redirect: "/dashboard" });
+    res.json({ ok: true, redirect: "/dashboard", token: session, store_id: store.id });
   } catch (e: any) {
     console.error("BigCommerce token connect failed:", e.message);
     res.status(500).json({ error: "BigCommerce connect failed" });
@@ -243,9 +255,9 @@ authRouter.post("/shopify/token-connect", async (req, res) => {
     }
 
     const store = await upsertStore({ platform: "shopify", store_domain: shop, access_token: token });
-    setSession(req, res, store.id);
+    const session = setSession(req, res, store.id);
     startInitialSync(store.id);
-    res.json({ ok: true, redirect: "/dashboard" });
+    res.json({ ok: true, redirect: "/dashboard", token: session, store_id: store.id });
   } catch (e: any) {
     console.error("Shopify token connect failed:", e.message);
     res.status(500).json({ error: "Shopify connect failed" });
@@ -267,9 +279,9 @@ authRouter.post("/woocommerce/connect", async (req, res) => {
       store_domain: domain,
       access_token: `${consumer_key}:${consumer_secret}`,
     });
-    setSession(req, res, store.id);
+    const session = setSession(req, res, store.id);
     startInitialSync(store.id);
-    res.json({ ok: true, redirect: "/dashboard" });
+    res.json({ ok: true, redirect: "/dashboard", token: session, store_id: store.id });
   } catch (e: any) {
     console.error("Woo connect failed:", e.message);
     res.status(500).json({ error: "WooCommerce connect failed" });
