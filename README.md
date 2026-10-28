@@ -89,6 +89,25 @@ docker compose up --build
 For OAuth installs and webhooks in dev, expose the server over HTTPS
 (`ngrok http 3000` or `cloudflared tunnel`) and set that URL as `APP_URL`.
 
+## Start automatically at Windows sign-in (local setup)
+
+`scripts/start-stocksense.ps1` starts Docker Desktop if needed, runs
+`docker compose up -d`, waits for `/health`, and starts the ngrok tunnel on
+the fixed domain in the background. It is safe to run twice. Log:
+`%LOCALAPPDATA%\StockSense\startup.log`.
+
+Register it once so it runs at every sign-in (adds `StockSense.cmd` to your
+Startup folder, no admin rights; `-Remove` undoes it):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-autostart.ps1
+```
+
+The containers already use `restart: unless-stopped`, so once Docker is up
+they return on their own. Alternatively turn on Docker Desktop > Settings >
+General > "Start Docker Desktop when you sign in", but ngrok still needs the
+script.
+
 ## Quick start (no Docker, e.g. your EC2)
 
 ```bash
