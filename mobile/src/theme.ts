@@ -4,20 +4,20 @@ import { useColorScheme } from "react-native";
  * Design tokens. A restrained, professional palette: neutral surfaces, one
  * brand blue for actions, and semantic colours reserved for meaning
  * (danger / warning / success / info). Light is the default; dark follows
- * the phone's setting.
+ * the phone's setting. Type is Inter, loaded in App.tsx.
  */
 export interface Theme {
   dark: boolean;
-  bg: string; // screen background
-  surface: string; // cards
-  surfaceAlt: string; // inputs, table headers, subtle fills
+  bg: string;
+  surface: string;
+  surfaceAlt: string;
   border: string;
   text: string;
   textSecondary: string;
   textMuted: string;
   primary: string;
-  primaryText: string; // text on primary
-  primarySoft: string; // tinted background for primary
+  primaryText: string;
+  primarySoft: string;
   danger: string;
   dangerSoft: string;
   warning: string;
@@ -28,11 +28,12 @@ export interface Theme {
   infoSoft: string;
   neutral: string;
   neutralSoft: string;
-  accent: string; // untracked / special
+  accent: string;
   accentSoft: string;
   chartHistory: string;
   chartForecast: string;
   chartGrid: string;
+  skeleton: string;
 }
 
 export const light: Theme = {
@@ -62,6 +63,7 @@ export const light: Theme = {
   chartHistory: "#64748B",
   chartForecast: "#1D4ED8",
   chartGrid: "#E3E8EF",
+  skeleton: "#E6EAF0",
 };
 
 export const dark: Theme = {
@@ -91,6 +93,7 @@ export const dark: Theme = {
   chartHistory: "#94A3B8",
   chartForecast: "#60A5FA",
   chartGrid: "#263349",
+  skeleton: "#1E2A40",
 };
 
 export function useTheme(): Theme {
@@ -98,8 +101,9 @@ export function useTheme(): Theme {
 }
 
 export type RiskLevel = "critical" | "low_stock" | "healthy" | "overstocked" | "no_demand" | "untracked";
+export type ToneName = "danger" | "warning" | "success" | "info" | "neutral" | "accent" | "primary";
 
-export const riskMeta: Record<RiskLevel, { label: string; tone: "danger" | "warning" | "success" | "info" | "neutral" | "accent"; hint: string }> = {
+export const riskMeta: Record<RiskLevel, { label: string; tone: ToneName; hint: string }> = {
   critical: { label: "Critical", tone: "danger", hint: "Runs out before a reorder can arrive" },
   low_stock: { label: "Low stock", tone: "warning", hint: "At or below the reorder point" },
   healthy: { label: "Healthy", tone: "success", hint: "Enough cover for the lead time" },
@@ -108,7 +112,9 @@ export const riskMeta: Record<RiskLevel, { label: string; tone: "danger" | "warn
   untracked: { label: "Untracked", tone: "accent", hint: "Stock not tracked in your store" },
 };
 
-export function tone(t: Theme, name: "danger" | "warning" | "success" | "info" | "neutral" | "accent" | "primary") {
+export const RISK_ORDER: RiskLevel[] = ["critical", "low_stock", "healthy", "overstocked", "no_demand", "untracked"];
+
+export function tone(t: Theme, name: ToneName) {
   switch (name) {
     case "danger": return { fg: t.danger, bg: t.dangerSoft };
     case "warning": return { fg: t.warning, bg: t.warningSoft };
@@ -123,22 +129,34 @@ export function tone(t: Theme, name: "danger" | "warning" | "success" | "info" |
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 export const radius = { sm: 8, md: 12, lg: 16, pill: 999 };
 
+/** Inter weights. Each weight is its own family on Android, so set both. */
+const FAMILY: Record<400 | 500 | 600 | 700 | 800, string> = {
+  400: "Inter_400Regular",
+  500: "Inter_500Medium",
+  600: "Inter_600SemiBold",
+  700: "Inter_700Bold",
+  800: "Inter_800ExtraBold",
+};
+export const fw = (weight: 400 | 500 | 600 | 700 | 800) =>
+  ({ fontFamily: FAMILY[weight], fontWeight: String(weight) as "400" | "500" | "600" | "700" | "800" });
+
 export const type = {
-  display: { fontSize: 28, fontWeight: "800" as const, letterSpacing: -0.5 },
-  title: { fontSize: 22, fontWeight: "700" as const, letterSpacing: -0.3 },
-  heading: { fontSize: 16, fontWeight: "700" as const },
-  body: { fontSize: 15, fontWeight: "400" as const, lineHeight: 21 },
-  bodyStrong: { fontSize: 15, fontWeight: "600" as const },
-  caption: { fontSize: 13, fontWeight: "400" as const, lineHeight: 18 },
-  label: { fontSize: 11, fontWeight: "600" as const, letterSpacing: 0.6, textTransform: "uppercase" as const },
-  kpi: { fontSize: 24, fontWeight: "800" as const, letterSpacing: -0.5 },
+  display: { ...fw(800), fontSize: 30, letterSpacing: -0.6, lineHeight: 36 },
+  title: { ...fw(700), fontSize: 22, letterSpacing: -0.3, lineHeight: 28 },
+  heading: { ...fw(600), fontSize: 16, lineHeight: 22 },
+  body: { ...fw(400), fontSize: 15, lineHeight: 22 },
+  bodyStrong: { ...fw(600), fontSize: 15, lineHeight: 21 },
+  caption: { ...fw(400), fontSize: 13, lineHeight: 18 },
+  captionStrong: { ...fw(600), fontSize: 13, lineHeight: 18 },
+  label: { ...fw(600), fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase" as const, lineHeight: 14 },
+  kpi: { ...fw(800), fontSize: 24, letterSpacing: -0.5, lineHeight: 30 },
+  mono: { fontFamily: "monospace", fontSize: 12 },
 };
 
-/** Soft shadow for cards (iOS) + elevation (Android). */
 export const shadow = {
   shadowColor: "#0F172A",
   shadowOpacity: 0.06,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 2 },
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 3 },
   elevation: 2,
 };

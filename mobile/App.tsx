@@ -3,6 +3,14 @@ import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from "@expo-google-fonts/inter";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { Navigation } from "./src/navigation";
 import { StatusView } from "./src/components/ui";
@@ -14,13 +22,13 @@ const queryClient = new QueryClient({
   },
 });
 
-function Root() {
+function Root({ fontsReady }: { fontsReady: boolean }) {
   const { ready } = useAuth();
   const t = useTheme();
   return (
     <>
       <StatusBar style={t.dark ? "light" : "dark"} />
-      {ready ? (
+      {ready && fontsReady ? (
         <Navigation />
       ) : (
         <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -32,11 +40,18 @@ function Root() {
 }
 
 export default function App() {
+  const [fontsReady] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Root />
+          <Root fontsReady={fontsReady} />
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

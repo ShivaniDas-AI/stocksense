@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>StockSense Documentation</title>
+<style>
+  @page { size: A4; margin: 22mm 18mm 20mm 18mm; }
+  :root {
+    --ink: #0F172A; --ink2: #334155; --muted: #64748B; --line: #E2E8F0; --soft: #F1F5F9;
+    --brand: #1D4ED8; --brand-soft: #E6EEFC; --danger: #DC2626; --warn: #B45309; --ok: #047857;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font: 10.5pt/1.55 "Segoe UI", Inter, -apple-system, Roboto, Arial, sans-serif; color: var(--ink); }
+  a { color: var(--brand); text-decoration: none; }
+  code { font-family: Consolas, "Cascadia Mono", Menlo, monospace; font-size: 9.2pt; background: var(--soft); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+  p { margin: 0 0 8pt; }
+  strong { color: var(--ink); }
+
+  /* cover */
+  .cover { page-break-after: always; height: 240mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .brand { display: flex; align-items: center; gap: 12px; }
+  .cover .mark { width: 44px; height: 44px; border-radius: 12px; background: var(--brand); display: flex; align-items: center; justify-content: center; }
+  .cover .mark svg { width: 26px; height: 26px; }
+  .cover .name { font-size: 20pt; font-weight: 800; letter-spacing: -0.4px; }
+  .cover .tag { color: var(--muted); font-size: 10.5pt; }
+  .cover h1 { font-size: 34pt; line-height: 1.1; letter-spacing: -0.8px; margin: 0 0 12pt; }
+  .cover .sub { font-size: 13pt; color: var(--ink2); max-width: 130mm; }
+  .cover .meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; border-top: 1px solid var(--line); padding-top: 14pt; }
+  .cover .meta div { font-size: 9.5pt; color: var(--muted); }
+  .cover .meta b { display: block; color: var(--ink); font-size: 11pt; margin-top: 2px; }
+
+  /* toc */
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 16pt; margin: 0 0 10pt; }
+  .toc ol { list-style: none; padding: 0; margin: 0; column-count: 1; }
+  .toc li { padding: 4px 0; border-bottom: 1px dotted var(--line); font-size: 10.5pt; }
+  .toc li.d3 { padding-left: 18px; font-size: 9.8pt; color: var(--ink2); }
+  .toc li a { color: inherit; }
+
+  /* body */
+  h2.section { page-break-before: always; font-size: 20pt; letter-spacing: -0.4px; margin: 0 0 12pt; padding-bottom: 8pt; border-bottom: 2px solid var(--ink); display: flex; align-items: baseline; gap: 10px; }
+  h2.section .num { color: var(--brand); font-size: 13pt; font-weight: 700; }
+  h3 { font-size: 12.5pt; margin: 16pt 0 6pt; color: var(--ink); }
+  ul, ol { margin: 0 0 10pt 18pt; padding: 0; }
+  li { margin: 2pt 0; }
+  li input[type=checkbox] { width: 11px; height: 11px; margin: 0 6px 0 0; vertical-align: -1px; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 9.6pt; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th { text-align: left; background: var(--soft); color: var(--ink2); font-weight: 600; font-size: 8.8pt; text-transform: uppercase; letter-spacing: .4px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-weight: 600; width: 32%; }
+  figure.diagram { margin: 10pt 0 14pt; page-break-inside: avoid; }
+  figure.diagram svg { width: 100%; height: auto; }
+  figcaption { font-size: 9pt; color: var(--muted); margin-top: 4pt; text-align: center; }
+  .footer { position: fixed; bottom: -12mm; left: 0; right: 0; font-size: 8.5pt; color: var(--muted); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div>
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg></div>
+      <div><div class="name">StockSense</div><div class="tag">AI inventory forecasting for online stores</div></div>
+    </div>
+  </div>
+  <div>
+    <h1>Project documentation</h1>
+    <div class="sub">How the system works, what has been built, how to run it, and everything required to take it live.</div>
+  </div>
+  <div class="meta">
+    <div>Version<b>1.0</b></div>
+    <div>Date<b>%%DATE%%</b></div>
+    <div>Repository<b>github.com/ShivaniDas-AI/stocksense</b></div>
+  </div>
+</section>
+
+<section class="toc">
+  <h2>Contents</h2>
+  <ol>
+%%TOC%%
+  </ol>
+</section>
+
+%%BODY%%
+
+</body>
+</html>

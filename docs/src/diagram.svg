@@ -1,0 +1,46 @@
+<svg viewBox="0 0 760 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One server and one worker turn store orders into stockout warnings" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#94A3B8"/></marker>
+  </defs>
+  <text x="24" y="30" font-size="15" font-weight="600" fill="#0F172A">One server and one worker turn store orders into stockout warnings</text>
+  <g fill="none" stroke="#94A3B8" stroke-width="1.25">
+    <path d="M402 112V160" marker-end="url(#arch-arrow)"/>
+    <path d="M402 264V312" marker-start="url(#arch-arrow)" marker-end="url(#arch-arrow)"/>
+    <path d="M552 364H592" marker-start="url(#arch-arrow)" marker-end="url(#arch-arrow)"/>
+    <path d="M252 212H204" marker-end="url(#arch-arrow)"/>
+    <path d="M228 212V140H204" marker-end="url(#arch-arrow)"/>
+    <path d="M228 212V284H204" marker-end="url(#arch-arrow)"/>
+  </g>
+  <text x="412" y="140" font-size="11.5" fill="#475569">orders, products, stock levels</text>
+  <text x="412" y="292" font-size="11.5" fill="#475569">writes sync data, reads forecasts</text>
+  <rect x="252" y="56" width="300" height="56" rx="8" fill="none" stroke="#94A3B8" stroke-width="1.25"/>
+  <text x="402" y="80" text-anchor="middle" font-weight="600" fill="#0F172A">Online store</text>
+  <text x="402" y="96" text-anchor="middle" font-size="11.5" fill="#475569">Shopify · BigCommerce · WooCommerce</text>
+  <rect x="252" y="160" width="300" height="104" rx="8" fill="none" stroke="#94A3B8" stroke-width="1.25"/>
+  <text x="268" y="184" font-weight="600" fill="#0F172A">Node.js server (Express)</text>
+  <text x="268" y="200" font-size="11.5" fill="#475569">Connects stores, backfills 18 months</text>
+  <text x="268" y="216" font-size="11.5" fill="#475569">Re-syncs on webhooks and nightly at 01:30</text>
+  <text x="268" y="232" font-size="11.5" fill="#475569">Queues a forecast after every sync</text>
+  <text x="268" y="248" font-size="11.5" fill="#475569">Serves the API, dashboard, 08:00 email</text>
+  <rect x="252" y="312" width="300" height="104" rx="8" fill="none" stroke="#94A3B8" stroke-width="1.25"/>
+  <text x="268" y="336" font-weight="600" fill="#0F172A">PostgreSQL database</text>
+  <text x="268" y="352" font-size="11.5" fill="#475569">Stores, products and variants with stock</text>
+  <text x="268" y="368" font-size="11.5" fill="#475569">Orders rolled up to daily sales per SKU</text>
+  <text x="268" y="384" font-size="11.5" fill="#475569">Forecasts and stock risk per run</text>
+  <text x="268" y="400" font-size="11.5" fill="#475569">sync_jobs table doubles as the job queue</text>
+  <rect x="592" y="312" width="144" height="104" rx="8" fill="#1D4ED8" fill-opacity="0.1" stroke="#1D4ED8" stroke-width="2"/>
+  <text x="604" y="336" font-weight="600" fill="#0F172A">Python worker</text>
+  <text x="604" y="352" font-size="11.5" fill="#475569">Queued jobs: 30 s</text>
+  <text x="604" y="368" font-size="11.5" fill="#475569">Full run: 02:00 UTC</text>
+  <text x="604" y="384" font-size="11.5" fill="#475569">AutoETS, Croston</text>
+  <text x="604" y="400" font-size="11.5" fill="#475569">or moving average</text>
+  <rect x="24" y="112" width="180" height="56" rx="8" fill="none" stroke="#94A3B8" stroke-width="1.25"/>
+  <text x="114" y="136" text-anchor="middle" font-weight="600" fill="#0F172A">Web dashboard</text>
+  <text x="114" y="152" text-anchor="middle" font-size="11.5" fill="#475569">browser at /dashboard</text>
+  <rect x="24" y="184" width="180" height="56" rx="8" fill="none" stroke="#94A3B8" stroke-width="1.25"/>
+  <text x="114" y="208" text-anchor="middle" font-weight="600" fill="#0F172A">Mobile app</text>
+  <text x="114" y="224" text-anchor="middle" font-size="11.5" fill="#475569">phone or PC browser</text>
+  <rect x="24" y="256" width="180" height="56" rx="8" fill="none" stroke="#94A3B8" stroke-width="1.25"/>
+  <text x="114" y="280" text-anchor="middle" font-weight="600" fill="#0F172A">Email digest</text>
+  <text x="114" y="296" text-anchor="middle" font-size="11.5" fill="#475569">critical + low, 08:00</text>
+</svg>

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo/metro-runtime": "~58.0.15",
     "@expo/vector-icons": "^15.0.2",
     "@react-navigation/bottom-tabs": "^7.21.0",
@@ -10,6 +11,9 @@
     "@react-navigation/native-stack": "^7.21.0",
     "@tanstack/react-query": "^5.105.0",
     "expo": "~58.0.19",
+    "expo-font": "~58.0.11",
+    "expo-haptics": "~58.0.7",
+    "expo-image": "~58.0.18",
     "expo-secure-store": "~58.0.2",
     "expo-status-bar": "~58.0.4",
     "react": "19.3.0",

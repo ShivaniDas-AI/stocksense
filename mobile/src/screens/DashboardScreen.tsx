@@ -7,11 +7,14 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../api/client";
 import type { RiskItem, Summary } from "../api/types";
-import { Button, Card, Chip, KpiTile, Notice, Pill, RiskBadge, ScreenHeader, SectionTitle, StatusView } from "../components/ui";
-import { radius, riskMeta, space, tone, type, useTheme } from "../theme";
-import { dateLabel, days, money, num, pctChange, rate } from "../utils/format";
+import { Avatar, Button, Card, Chip, KpiTile, Notice, OptionSheet, Pill, RiskBadge, SectionTitle, StatusView, Thumb } from "../components/ui";
+import { DashboardSkeleton } from "../components/Skeleton";
+import { RiskBar } from "../components/RiskBar";
+import { fw, radius, riskMeta, RiskLevel, space, tone, type, useTheme } from "../theme";
+import { ago, dateLabel, days, money, num, pctChange, rate } from "../utils/format";
 import type { RootStackParamList } from "../navigation";
 import { useAuth } from "../auth/AuthContext";
+import { haptic } from "../utils/haptics";
 
 const PLATFORM = { shopify: "Shopify", bigcommerce: "BigCommerce", woocommerce: "WooCommerce" } as const;
 const TRACKING_HINT = {
@@ -30,12 +33,38 @@ const FILTERS: Filter[] = [
   { key: "critical,low_stock,healthy,overstocked,no_demand,untracked", label: "All", count: (s) => s.skus_forecasted },
 ];
 
+type SortKey = "risk" | "stockout" | "revenue" | "stock" | "name";
+const SORTS: { key: SortKey; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
+  { key: "risk", label: "Risk level, then soonest stockout", icon: "alert-circle-outline" },
+  { key: "stockout", label: "Soonest stockout first", icon: "time-outline" },
+  { key: "revenue", label: "Most revenue at risk first", icon: "cash-outline" },
+  { key: "stock", label: "Lowest stock first", icon: "cube-outline" },
+  { key: "name", label: "Name, A to Z", icon: "text-outline" },
+];
+
+const RISK_RANK: Record<RiskLevel, number> = { critical: 0, low_stock: 1, healthy: 2, overstocked: 3, untracked: 4, no_demand: 5 };
+
+function sortItems(items: RiskItem[], key: SortKey): RiskItem[] {
+  const big = 9e15;
+  const d = (s: string | null) => (s ? Date.parse(s) : big);
+  const copy = [...items];
+  switch (key) {
+    case "stockout": return copy.sort((a, b) => d(a.stockout_date) - d(b.stockout_date));
+    case "revenue": return copy.sort((a, b) => Number(b.revenue_at_risk) - Number(a.revenue_at_risk));
+    case "stock": return copy.sort((a, b) => (a.risk_level === "untracked" ? big : a.current_stock) - (b.risk_level === "untracked" ? big : b.current_stock));
+    case "name": return copy.sort((a, b) => a.title.localeCompare(b.title));
+    default: return copy.sort((a, b) => RISK_RANK[a.risk_level] - RISK_RANK[b.risk_level] || d(a.stockout_date) - d(b.stockout_date));
+  }
+}
+
 export function DashboardScreen() {
   const t = useTheme();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signOut } = useAuth();
   const [level, setLevel] = useState(FILTERS[0].key);
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("risk");
+  const [sortOpen, setSortOpen] = useState(false);
 
   const store = useQuery({
     queryKey: ["store"],
@@ -55,16 +84,15 @@ export function DashboardScreen() {
 
   const currency = store.data?.currency || "USD";
   const refreshing = store.isFetching || summary.isFetching || risks.isFetching;
-  const refresh = () => { store.refetch(); summary.refetch(); risks.refetch(); };
+  const refresh = () => { haptic.tap(); store.refetch(); summary.refetch(); risks.refetch(); };
   const filters = useMemo(
     () => FILTERS.filter((f) => f.key !== "untracked" || (summary.data?.untracked ?? 0) > 0),
     [summary.data?.untracked]
   );
+  const items = useMemo(() => sortItems(risks.data?.items ?? [], sort), [risks.data?.items, sort]);
 
   /* ---------- status screens ---------- */
-  // isPending (not isLoading) also covers the instant after the cache is
-  // reset on connect / store switch, when there is no data and no fetch yet.
-  if (store.isPending) return <Screen><StatusView title="Loading your store" spinner /></Screen>;
+  if (store.isPending) return <Screen><DashboardSkeleton /></Screen>;
   if (store.isError) {
     const status = (store.error as any)?.status;
     return (
@@ -80,14 +108,14 @@ export function DashboardScreen() {
     );
   }
   const s = store.data;
-  if (!s) return <Screen><StatusView title="Loading your store" spinner /></Screen>;
+  if (!s) return <Screen><DashboardSkeleton /></Screen>;
   if (s.sync_status === "error")
     return <Screen><StatusView icon="alert-circle-outline" toneName="danger" title="Store sync failed" body={s.sync_error || "The store could not be synced. Check the credentials and connect again."} action={<Button title="Connect again" variant="secondary" onPress={signOut} />} /></Screen>;
   if (s.sync_status === "uninstalled")
     return <Screen><StatusView icon="unlink-outline" toneName="warning" title="Store disconnected" body="The app was uninstalled from the store. Connect it again to resume forecasting." /></Screen>;
   if (!ready)
     return <Screen><StatusView spinner title="Syncing your store" body="Pulling products, inventory and order history. This usually takes under a minute." /></Screen>;
-  if (summary.isPending || !summary.data) return <Screen><StatusView title="Loading forecast" spinner /></Screen>;
+  if (summary.isPending || !summary.data) return <Screen><DashboardSkeleton /></Screen>;
   if (summary.isError) return <Screen><StatusView icon="cloud-offline-outline" toneName="danger" title="Could not load the forecast" body={(summary.error as Error).message} action={<Button title="Try again" variant="secondary" icon="refresh" onPress={() => summary.refetch()} />} /></Screen>;
   if (!summary.data.ready) {
     const job = summary.data.forecast_job;
@@ -102,38 +130,52 @@ export function DashboardScreen() {
   const k = sm.kpis;
   const salesDelta = k ? pctChange(k.sales_30d.revenue, k.sales_prev_30d.revenue) : null;
   const danger = tone(t, "danger");
+  const atRisk = sm.at_risk ?? 0;
+  const counts: Partial<Record<RiskLevel, number>> = {
+    critical: sm.critical, low_stock: sm.low_stock, healthy: sm.healthy, overstocked: sm.overstocked, no_demand: sm.no_demand, untracked: sm.untracked,
+  };
+  const pickLevel = (lvl: RiskLevel) => { haptic.tap(); setLevel(lvl); };
 
   const header = (
     <View>
-      <ScreenHeader
-        title="Dashboard"
-        subtitle={`${PLATFORM[s.platform]} · ${s.store_domain}`}
-        right={sm.run_date ? <Pill icon="sparkles-outline" toneName="primary">{`Forecast ${dateLabel(sm.run_date)}`}</Pill> : undefined}
-      />
+      {/* Store header */}
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: space.lg }}>
+        <Avatar name={s.store_domain} />
+        <View style={{ flex: 1, marginLeft: space.md }}>
+          <Text style={[type.title, { color: t.text }]} numberOfLines={1}>{s.store_domain}</Text>
+          <Text style={[type.caption, { color: t.textSecondary }]} numberOfLines={1}>
+            {PLATFORM[s.platform]} · updated {ago(summary.dataUpdatedAt)}
+          </Text>
+        </View>
+        {sm.run_date ? <Pill icon="sparkles-outline" toneName="primary">{`Forecast ${dateLabel(sm.run_date)}`}</Pill> : null}
+      </View>
 
       {/* Hero: stockout risk */}
-      <Card style={{ padding: space.lg }}>
+      <Card>
         <View style={{ flexDirection: "row" }}>
           <View style={{ flex: 1 }}>
             <Text style={[type.label, { color: t.textMuted }]}>SKUs at risk</Text>
-            <Text style={[type.display, { color: (sm.at_risk ?? 0) > 0 ? t.danger : t.text, marginTop: 4 }]}>{num(sm.at_risk)}</Text>
-            <View style={{ flexDirection: "row", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+            <Text style={[type.display, { color: atRisk > 0 ? t.danger : t.success, marginTop: 4 }]}>{num(atRisk)}</Text>
+            <View style={{ flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
               <Pill toneName="danger">{`${sm.critical ?? 0} critical`}</Pill>
-              <Pill toneName="warning">{`${sm.low_stock ?? 0} low stock`}</Pill>
+              <Pill toneName="warning">{`${sm.low_stock ?? 0} low`}</Pill>
             </View>
           </View>
           <View style={{ width: 1, backgroundColor: t.border, marginHorizontal: space.lg }} />
           <View style={{ flex: 1 }}>
             <Text style={[type.label, { color: t.textMuted }]}>Revenue at risk</Text>
             <Text style={[type.display, { color: t.text, marginTop: 4 }]} numberOfLines={1} adjustsFontSizeToFit>{money(sm.revenue_at_risk, currency)}</Text>
-            <Text style={[type.caption, { color: t.textSecondary, marginTop: 8 }]}>next 8 weeks if not reordered</Text>
+            <Text style={[type.caption, { color: t.textSecondary, marginTop: 6 }]}>next 8 weeks if not reordered</Text>
           </View>
         </View>
+        <View style={{ marginTop: space.lg, paddingTop: space.md, borderTopWidth: 1, borderTopColor: t.border }}>
+          <RiskBar counts={counts} onPick={pickLevel} />
+        </View>
         {k?.next_stockout_date ? (
-          <View style={{ flexDirection: "row", alignItems: "center", marginTop: space.lg, paddingTop: space.md, borderTopWidth: 1, borderTopColor: t.border }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: space.md, backgroundColor: danger.bg, borderRadius: radius.md, padding: 10 }}>
             <Ionicons name="time-outline" size={16} color={danger.fg} style={{ marginRight: 8 }} />
-            <Text style={[type.caption, { color: t.textSecondary, flex: 1 }]} numberOfLines={1}>
-              Next stockout <Text style={{ color: t.text, fontWeight: "700" }}>{dateLabel(k.next_stockout_date)}</Text>
+            <Text style={[type.caption, { color: t.textSecondary, flex: 1 }]} numberOfLines={2}>
+              Next stockout <Text style={[fw(700), { color: t.text }]}>{dateLabel(k.next_stockout_date)}</Text>
               {k.next_stockout_title ? ` · ${k.next_stockout_title}` : ""}
             </Text>
           </View>
@@ -148,8 +190,8 @@ export function DashboardScreen() {
             <KpiTile label="Forecast · 30 days" icon="analytics-outline" toneName="primary" value={money(k.forecast_30d.revenue, currency)} sub={`${num(k.forecast_30d.units)} units expected`} />
             <KpiTile label="Inventory value" icon="cube-outline" toneName="info" value={money(k.inventory_value, currency)} sub={`${num(k.units_on_hand)} units on hand · retail`} />
             <KpiTile label="Days of cover" icon="hourglass-outline" toneName={k.median_cover_days != null && k.median_cover_days < 14 ? "warning" : "neutral"} value={k.median_cover_days != null ? `${k.median_cover_days} d` : "-"} sub={k.healthy_pct != null ? `${k.healthy_pct}% of SKUs healthy` : "median across SKUs"} />
-            <KpiTile label="Reorder now" icon="cart-outline" toneName={k.reorder_units > 0 ? "danger" : "neutral"} value={num(k.reorder_units)} sub={`${money(k.reorder_value, currency)} at retail`} />
-            <KpiTile label="Overstock" icon="layers-outline" toneName={k.overstock_units > 0 ? "warning" : "neutral"} value={num(sm.overstocked)} sub={k.overstock_units > 0 ? `${num(k.overstock_units)} units · ${money(k.overstock_value, currency)}` : "beyond 120 days of demand"} />
+            <KpiTile label="Reorder now" icon="cart-outline" toneName={k.reorder_units > 0 ? "danger" : "neutral"} value={num(k.reorder_units)} sub={`${money(k.reorder_value, currency)} at retail`} onPress={() => pickLevel("critical")} />
+            <KpiTile label="Overstock" icon="layers-outline" toneName={k.overstock_units > 0 ? "warning" : "neutral"} value={num(sm.overstocked)} sub={k.overstock_units > 0 ? `${num(k.overstock_units)} units · ${money(k.overstock_value, currency)}` : "beyond 120 days of demand"} onPress={() => pickLevel("overstocked")} />
           </View>
           {k.sell_through_30d != null ? (
             <Text style={[type.caption, { color: t.textMuted, marginTop: space.sm }]}>
@@ -167,7 +209,16 @@ export function DashboardScreen() {
         </View>
       ) : null}
 
-      <SectionTitle>Products</SectionTitle>
+      <SectionTitle
+        action={
+          <Pressable onPress={() => { haptic.tap(); setSortOpen(true); }} style={{ flexDirection: "row", alignItems: "center" }}>
+            <Ionicons name="swap-vertical-outline" size={14} color={t.primary} style={{ marginRight: 4 }} />
+            <Text style={[fw(600), { color: t.primary, fontSize: 12 }]}>Sort</Text>
+          </Pressable>
+        }
+      >
+        Products
+      </SectionTitle>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: space.md }} contentContainerStyle={{ paddingRight: space.lg }}>
         {filters.map((f) => (
           <Chip key={f.key} label={f.label} count={f.count(sm)} active={level === f.key} onPress={() => setLevel(f.key)} />
@@ -176,7 +227,7 @@ export function DashboardScreen() {
       <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, borderRadius: radius.md, paddingHorizontal: 12, marginBottom: space.md }}>
         <Ionicons name="search-outline" size={18} color={t.textMuted} />
         <TextInput
-          style={{ flex: 1, color: t.text, paddingVertical: 11, paddingHorizontal: 8, fontSize: 15 }}
+          style={[fw(400), { flex: 1, color: t.text, paddingVertical: 11, paddingHorizontal: 8, fontSize: 15 }]}
           placeholder="Search by name or SKU"
           placeholderTextColor={t.textMuted}
           value={q}
@@ -186,13 +237,18 @@ export function DashboardScreen() {
         />
         {q ? <Pressable onPress={() => setQ("")} hitSlop={8}><Ionicons name="close-circle" size={18} color={t.textMuted} /></Pressable> : null}
       </View>
+      {items.length ? (
+        <Text style={[type.caption, { color: t.textMuted, marginBottom: space.sm }]}>
+          {items.length} {items.length === 1 ? "product" : "products"} · {SORTS.find((x) => x.key === sort)?.label.toLowerCase()}
+        </Text>
+      ) : null}
     </View>
   );
 
   return (
     <Screen>
       <FlatList
-        data={risks.data?.items ?? []}
+        data={items}
         keyExtractor={(r) => r.variant_id}
         ListHeaderComponent={header}
         contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl * 2 }}
@@ -206,9 +262,10 @@ export function DashboardScreen() {
           )
         }
         renderItem={({ item }) => (
-          <ProductRow item={item} currency={currency} onPress={() => nav.navigate("Product", { id: item.variant_id, title: item.title })} />
+          <ProductRow item={item} currency={currency} onPress={() => { haptic.tap(); nav.navigate("Product", { id: item.variant_id, title: item.title }); }} />
         )}
       />
+      <OptionSheet title="Sort products" options={SORTS} value={sort} onSelect={setSort} visible={sortOpen} onClose={() => setSortOpen(false)} />
     </Screen>
   );
 }
@@ -224,8 +281,9 @@ function ProductRow({ item, currency, onPress }: { item: RiskItem; currency: str
       <Card style={{ padding: 0, marginBottom: space.sm, flexDirection: "row", overflow: "hidden" }}>
         <View style={{ width: 4, backgroundColor: c.fg }} />
         <View style={{ flex: 1, padding: space.md }}>
-          <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-            <View style={{ flex: 1, marginRight: space.sm }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Thumb uri={item.image_url} />
+            <View style={{ flex: 1, marginHorizontal: space.md }}>
               <Text style={[type.bodyStrong, { color: t.text }]} numberOfLines={2}>{item.title}</Text>
               <Text style={[type.caption, { color: t.textMuted }]} numberOfLines={1}>
                 {item.sku ? `SKU ${item.sku}` : "No SKU"} · {rate(item.avg_daily_demand)}/day
@@ -233,16 +291,13 @@ function ProductRow({ item, currency, onPress }: { item: RiskItem; currency: str
             </View>
             <RiskBadge level={item.risk_level} />
           </View>
-          <View style={{ flexDirection: "row", marginTop: space.sm, paddingTop: space.sm, borderTopWidth: 1, borderTopColor: t.border }}>
+          <View style={{ flexDirection: "row", marginTop: space.md, paddingTop: space.sm, borderTopWidth: 1, borderTopColor: t.border }}>
             <Metric label="Stock" value={untracked ? "—" : num(item.current_stock)} />
             <Metric label="Cover" value={days(item.days_of_stock)} warn={item.risk_level === "critical"} />
             <Metric label="Stockout" value={dateLabel(item.stockout_date)} warn={item.risk_level === "critical"} />
             <Metric label="Reorder" value={num(item.reorder_qty)} />
             <Metric label="At risk" value={revenueAtRisk > 0 ? money(revenueAtRisk, currency) : "—"} />
           </View>
-        </View>
-        <View style={{ justifyContent: "center", paddingRight: 8 }}>
-          <Ionicons name="chevron-forward" size={18} color={t.textMuted} />
         </View>
       </Card>
     </Pressable>
@@ -253,8 +308,8 @@ function Metric({ label, value, warn }: { label: string; value: string; warn?: b
   const t = useTheme();
   return (
     <View style={{ flex: 1 }}>
-      <Text style={{ color: t.textMuted, fontSize: 10, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</Text>
-      <Text style={{ color: warn ? t.danger : t.text, fontSize: 13, fontWeight: "700", marginTop: 1 }} numberOfLines={1}>{value}</Text>
+      <Text style={[fw(600), { color: t.textMuted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 }]}>{label}</Text>
+      <Text style={[fw(700), { color: warn ? t.danger : t.text, fontSize: 13, marginTop: 2 }]} numberOfLines={1}>{value}</Text>
     </View>
   );
 }

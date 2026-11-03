@@ -1,8 +1,8 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   TextInputProps,
@@ -11,7 +11,9 @@ import {
   ViewStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { radius, riskMeta, RiskLevel, shadow, space, tone, type, useTheme } from "../theme";
+import { Image } from "expo-image";
+import { fw, radius, riskMeta, RiskLevel, shadow, space, tone, ToneName, type, useTheme } from "../theme";
+import { haptic } from "../utils/haptics";
 
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -47,9 +49,35 @@ export function ScreenHeader({ title, subtitle, right }: { title: string; subtit
 export function SectionTitle({ children, action }: { children: string; action?: React.ReactNode }) {
   const t = useTheme();
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.lg, marginBottom: space.sm }}>
+    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.xl, marginBottom: space.sm }}>
       <Text style={[type.label, { color: t.textMuted }]}>{children}</Text>
       {action}
+    </View>
+  );
+}
+
+/** Store avatar: a tinted square with the store's initial. */
+export function Avatar({ name, size = 44, toneName = "primary" }: { name: string; size?: number; toneName?: ToneName }) {
+  const t = useTheme();
+  const c = tone(t, toneName);
+  const initial = (name.replace(/^\[.*?\]\s*/, "").trim()[0] || "?").toUpperCase();
+  return (
+    <View style={{ width: size, height: size, borderRadius: size * 0.28, backgroundColor: c.bg, alignItems: "center", justifyContent: "center" }}>
+      <Text style={[fw(700), { color: c.fg, fontSize: size * 0.42 }]}>{initial}</Text>
+    </View>
+  );
+}
+
+/** Product thumbnail with a neutral fallback. */
+export function Thumb({ uri, size = 48 }: { uri?: string | null; size?: number }) {
+  const t = useTheme();
+  return (
+    <View style={{ width: size, height: size, borderRadius: radius.sm, backgroundColor: t.surfaceAlt, overflow: "hidden", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: t.border }}>
+      {uri ? (
+        <Image source={{ uri }} style={{ width: size, height: size }} contentFit="cover" transition={150} />
+      ) : (
+        <Ionicons name="cube-outline" size={size * 0.42} color={t.textMuted} />
+      )}
     </View>
   );
 }
@@ -64,19 +92,21 @@ export function KpiTile({
   toneName = "neutral",
   delta,
   style,
+  onPress,
 }: {
   label: string;
   value: string;
   sub?: string;
   icon: IconName;
-  toneName?: "danger" | "warning" | "success" | "info" | "neutral" | "accent" | "primary";
+  toneName?: ToneName;
   delta?: { value: number; label?: string } | null;
   style?: ViewStyle;
+  onPress?: () => void;
 }) {
   const t = useTheme();
   const c = tone(t, toneName);
   const up = (delta?.value ?? 0) >= 0;
-  return (
+  const body = (
     <Card style={[{ flex: 1, minWidth: "46%", padding: space.md }, style]}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Text style={[type.label, { color: t.textMuted, flex: 1 }]} numberOfLines={1}>{label}</Text>
@@ -85,17 +115,19 @@ export function KpiTile({
         </View>
       </View>
       <Text style={[type.kpi, { color: t.text, marginTop: 6 }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, minHeight: 16 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, minHeight: 18 }}>
         {delta ? (
           <View style={{ flexDirection: "row", alignItems: "center", marginRight: 6 }}>
             <Ionicons name={up ? "arrow-up" : "arrow-down"} size={11} color={up ? t.success : t.danger} />
-            <Text style={{ color: up ? t.success : t.danger, fontSize: 12, fontWeight: "700" }}>{Math.abs(delta.value)}%</Text>
+            <Text style={[fw(700), { color: up ? t.success : t.danger, fontSize: 12 }]}>{Math.abs(delta.value)}%</Text>
           </View>
         ) : null}
         {sub ? <Text style={[type.caption, { color: t.textSecondary, flex: 1 }]} numberOfLines={1}>{sub}</Text> : null}
       </View>
     </Card>
   );
+  if (!onPress) return body;
+  return <Pressable onPress={() => { haptic.tap(); onPress(); }} style={({ pressed }) => ({ flex: 1, minWidth: "46%", opacity: pressed ? 0.8 : 1 })}>{body}</Pressable>;
 }
 
 /* ---------- badges, chips, pills ---------- */
@@ -107,7 +139,7 @@ export function RiskBadge({ level, size = "sm" }: { level: RiskLevel; size?: "sm
   return (
     <View style={{ backgroundColor: c.bg, borderRadius: radius.pill, paddingHorizontal: size === "md" ? 12 : 9, paddingVertical: size === "md" ? 5 : 3, alignSelf: "flex-start", flexDirection: "row", alignItems: "center" }}>
       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.fg, marginRight: 6 }} />
-      <Text style={{ color: c.fg, fontSize: size === "md" ? 13 : 11, fontWeight: "700" }}>{m.label}</Text>
+      <Text style={[fw(700), { color: c.fg, fontSize: size === "md" ? 13 : 11 }]}>{m.label}</Text>
     </View>
   );
 }
@@ -116,7 +148,7 @@ export function Chip({ label, active, onPress, count }: { label: string; active:
   const t = useTheme();
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => { haptic.tap(); onPress(); }}
       style={{
         flexDirection: "row",
         alignItems: "center",
@@ -129,21 +161,21 @@ export function Chip({ label, active, onPress, count }: { label: string; active:
         borderColor: active ? t.primary : t.border,
       }}
     >
-      <Text style={{ color: active ? t.primaryText : t.textSecondary, fontSize: 13, fontWeight: active ? "700" : "500" }}>{label}</Text>
+      <Text style={[active ? fw(700) : fw(500), { color: active ? t.primaryText : t.textSecondary, fontSize: 13 }]}>{label}</Text>
       {count !== undefined ? (
-        <Text style={{ color: active ? t.primaryText : t.textMuted, fontSize: 12, marginLeft: 6, opacity: 0.9 }}>{count}</Text>
+        <Text style={[fw(500), { color: active ? t.primaryText : t.textMuted, fontSize: 12, marginLeft: 6, opacity: 0.9 }]}>{count}</Text>
       ) : null}
     </Pressable>
   );
 }
 
-export function Pill({ icon, children, toneName = "neutral" }: { icon?: IconName; children: string; toneName?: "danger" | "warning" | "success" | "info" | "neutral" | "accent" | "primary" }) {
+export function Pill({ icon, children, toneName = "neutral" }: { icon?: IconName; children: string; toneName?: ToneName }) {
   const t = useTheme();
   const c = tone(t, toneName);
   return (
     <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: c.bg, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
       {icon ? <Ionicons name={icon} size={12} color={c.fg} style={{ marginRight: 4 }} /> : null}
-      <Text style={{ color: c.fg, fontSize: 12, fontWeight: "600" }}>{children}</Text>
+      <Text style={[fw(600), { color: c.fg, fontSize: 12 }]}>{children}</Text>
     </View>
   );
 }
@@ -158,6 +190,7 @@ export function Button({
   disabled,
   icon,
   style,
+  small,
 }: {
   title: string;
   onPress: () => void;
@@ -166,13 +199,14 @@ export function Button({
   disabled?: boolean;
   icon?: IconName;
   style?: ViewStyle;
+  small?: boolean;
 }) {
   const t = useTheme();
   const bg = variant === "primary" ? t.primary : t.surface;
   const fg = variant === "primary" ? t.primaryText : variant === "danger" ? t.danger : t.text;
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => { haptic.tap(); onPress(); }}
       disabled={disabled || loading}
       style={({ pressed }) => [
         {
@@ -180,12 +214,12 @@ export function Button({
           borderWidth: variant === "primary" ? 0 : 1,
           borderColor: variant === "danger" ? t.dangerSoft : t.border,
           borderRadius: radius.md,
-          minHeight: 48,
-          paddingHorizontal: 18,
+          minHeight: small ? 38 : 48,
+          paddingHorizontal: small ? 14 : 18,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
-          opacity: pressed || disabled ? 0.75 : 1,
+          opacity: pressed || disabled ? 0.7 : 1,
         },
         style,
       ]}
@@ -194,8 +228,8 @@ export function Button({
         <ActivityIndicator color={fg} />
       ) : (
         <>
-          {icon ? <Ionicons name={icon} size={17} color={fg} style={{ marginRight: 8 }} /> : null}
-          <Text style={{ color: fg, fontSize: 15, fontWeight: "700" }}>{title}</Text>
+          {icon ? <Ionicons name={icon} size={small ? 15 : 17} color={fg} style={{ marginRight: 8 }} /> : null}
+          <Text style={[fw(700), { color: fg, fontSize: small ? 13 : 15 }]}>{title}</Text>
         </>
       )}
     </Pressable>
@@ -224,6 +258,7 @@ export function Input(props: TextInputProps & { label?: string; hint?: string; e
               paddingHorizontal: 14,
               paddingVertical: 12,
               fontSize: 15,
+              fontFamily: "Inter_400Regular",
             },
             style,
           ]}
@@ -240,7 +275,7 @@ export function Input(props: TextInputProps & { label?: string; hint?: string; e
 export function Stepper({ label, value, onChange, min = 0, unit }: { label: string; value: number; onChange: (v: number) => void; min?: number; unit?: string }) {
   const t = useTheme();
   const btn = (icon: IconName, onPress: () => void, disabled?: boolean) => (
-    <Pressable onPress={onPress} disabled={disabled} style={{ width: 40, height: 44, alignItems: "center", justifyContent: "center", opacity: disabled ? 0.4 : 1 }}>
+    <Pressable onPress={() => { haptic.tap(); onPress(); }} disabled={disabled} style={{ width: 42, height: 46, alignItems: "center", justifyContent: "center", opacity: disabled ? 0.35 : 1 }}>
       <Ionicons name={icon} size={18} color={t.primary} />
     </Pressable>
   );
@@ -253,7 +288,7 @@ export function Stepper({ label, value, onChange, min = 0, unit }: { label: stri
           value={String(value)}
           onChangeText={(s) => onChange(Math.max(min, parseInt(s, 10) || 0))}
           keyboardType="number-pad"
-          style={{ flex: 1, textAlign: "center", color: t.text, fontSize: 16, fontWeight: "700", paddingVertical: 10 }}
+          style={[fw(700), { flex: 1, textAlign: "center", color: t.text, fontSize: 17, paddingVertical: 10 }]}
         />
         {btn("add", () => onChange(value + 1))}
       </View>
@@ -264,11 +299,11 @@ export function Stepper({ label, value, onChange, min = 0, unit }: { label: stri
 
 /* ---------- list rows ---------- */
 
-export function Row({ icon, title, subtitle, right, onPress, toneName = "neutral", last }: { icon?: IconName; title: string; subtitle?: string; right?: React.ReactNode; onPress?: () => void; toneName?: "danger" | "warning" | "success" | "info" | "neutral" | "accent" | "primary"; last?: boolean }) {
+export function Row({ icon, title, subtitle, right, onPress, toneName = "neutral", last }: { icon?: IconName; title: string; subtitle?: string; right?: React.ReactNode; onPress?: () => void; toneName?: ToneName; last?: boolean }) {
   const t = useTheme();
   const c = tone(t, toneName);
   return (
-    <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: t.border, opacity: pressed ? 0.7 : 1 })}>
+    <Pressable onPress={onPress ? () => { haptic.tap(); onPress(); } : undefined} disabled={!onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: t.border, opacity: pressed ? 0.7 : 1 })}>
       {icon ? (
         <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: c.bg, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
           <Ionicons name={icon} size={17} color={c.fg} />
@@ -276,7 +311,7 @@ export function Row({ icon, title, subtitle, right, onPress, toneName = "neutral
       ) : null}
       <View style={{ flex: 1 }}>
         <Text style={[type.bodyStrong, { color: t.text }]} numberOfLines={1}>{title}</Text>
-        {subtitle ? <Text style={[type.caption, { color: t.textSecondary }]} numberOfLines={1}>{subtitle}</Text> : null}
+        {subtitle ? <Text style={[type.caption, { color: t.textSecondary }]} numberOfLines={2}>{subtitle}</Text> : null}
       </View>
       {right}
       {onPress && !right ? <Ionicons name="chevron-forward" size={18} color={t.textMuted} /> : null}
@@ -298,7 +333,7 @@ export function StatusView({
   body?: string;
   spinner?: boolean;
   icon?: IconName;
-  toneName?: "danger" | "warning" | "success" | "info" | "neutral" | "accent" | "primary";
+  toneName?: ToneName;
   action?: React.ReactNode;
 }) {
   const t = useTheme();
@@ -319,7 +354,7 @@ export function StatusView({
   );
 }
 
-export function Notice({ icon = "information-circle", toneName = "accent", title, children }: { icon?: IconName; toneName?: "danger" | "warning" | "success" | "info" | "neutral" | "accent" | "primary"; title?: string; children: React.ReactNode }) {
+export function Notice({ icon = "information-circle", toneName = "accent", title, children }: { icon?: IconName; toneName?: ToneName; title?: string; children: React.ReactNode }) {
   const t = useTheme();
   const c = tone(t, toneName);
   return (
@@ -333,4 +368,42 @@ export function Notice({ icon = "information-circle", toneName = "accent", title
   );
 }
 
-export const styles = StyleSheet.create({});
+/* ---------- bottom sheet for small option lists ---------- */
+
+export function OptionSheet<T extends string>({
+  visible,
+  title,
+  options,
+  value,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  options: { key: T; label: string; icon?: IconName }[];
+  value: T;
+  onSelect: (key: T) => void;
+  onClose: () => void;
+}) {
+  const t = useTheme();
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(2,6,23,0.45)", justifyContent: "flex-end" }}>
+        <Pressable onPress={() => {}} style={{ backgroundColor: t.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: space.lg, paddingBottom: space.xxl }}>
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: t.border, alignSelf: "center", marginBottom: space.md }} />
+          <Text style={[type.heading, { color: t.text, marginBottom: space.sm }]}>{title}</Text>
+          {options.map((o, i) => {
+            const on = o.key === value;
+            return (
+              <Pressable key={o.key} onPress={() => { haptic.tap(); onSelect(o.key); onClose(); }} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 13, borderBottomWidth: i < options.length - 1 ? 1 : 0, borderBottomColor: t.border }}>
+                {o.icon ? <Ionicons name={o.icon} size={18} color={on ? t.primary : t.textMuted} style={{ marginRight: 12 }} /> : null}
+                <Text style={[on ? fw(600) : fw(400), { color: on ? t.primary : t.text, fontSize: 15, flex: 1 }]}>{o.label}</Text>
+                {on ? <Ionicons name="checkmark" size={18} color={t.primary} /> : null}
+              </Pressable>
+            );
+          })}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}

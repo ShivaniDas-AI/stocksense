@@ -36,7 +36,7 @@ function Tabs() {
         tabBarActiveTintColor: t.primary,
         tabBarInactiveTintColor: t.textMuted,
         tabBarStyle: { backgroundColor: t.surface, borderTopColor: t.border },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarLabelStyle: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
         tabBarIcon: ({ color, focused, size }) => (
           <Ionicons name={focused ? TAB_ICONS[route.name].on : TAB_ICONS[route.name].off} size={size} color={color} />
         ),
@@ -69,7 +69,7 @@ export function Navigation() {
         screenOptions={{
           headerStyle: { backgroundColor: t.surface },
           headerTintColor: t.text,
-          headerTitleStyle: { fontWeight: "700" },
+          headerTitleStyle: { fontFamily: "Inter_700Bold" },
           headerShadowVisible: false,
           headerBackButtonDisplayMode: "minimal",
           contentStyle: { backgroundColor: t.bg },

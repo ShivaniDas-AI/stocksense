@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,8 +7,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Button, Card, Input, Row, ScreenHeader, SectionTitle } from "../components/ui";
-import { space, type, useTheme } from "../theme";
+import { Avatar, Button, Card, Input, Row, ScreenHeader, SectionTitle } from "../components/ui";
+import { fw, space, type, useTheme } from "../theme";
+import { haptic } from "../utils/haptics";
 import type { RootStackParamList } from "../navigation";
 import { DEFAULT_API_URL } from "../config";
 
@@ -53,19 +54,22 @@ export function SettingsScreen() {
 
         <SectionTitle>Stores on this phone</SectionTitle>
         <Card style={{ paddingVertical: 4 }}>
-          {(stores.data?.stores ?? []).map((s, i, arr) => {
+          {(stores.data?.stores ?? []).map((s) => {
             const active = String(s.id) === String(stores.data?.active);
             return (
-              <Row
+              <Pressable
                 key={s.id}
-                icon="storefront-outline"
-                toneName={active ? "primary" : "neutral"}
-                title={s.store_domain}
-                subtitle={PLATFORM[s.platform]}
-                onPress={active ? undefined : () => switchStore.mutate(s.id)}
-                right={active ? <Ionicons name="checkmark-circle" size={20} color={t.primary} /> : <Text style={[type.caption, { color: t.primary, fontWeight: "700" }]}>Switch</Text>}
-                last={i === arr.length - 1 && false}
-              />
+                disabled={active || switchStore.isPending}
+                onPress={() => { haptic.tap(); switchStore.mutate(s.id); }}
+                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: t.border, opacity: pressed ? 0.7 : 1 })}
+              >
+                <Avatar name={s.store_domain} size={36} toneName={active ? "primary" : "neutral"} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[type.bodyStrong, { color: t.text }]} numberOfLines={1}>{s.store_domain}</Text>
+                  <Text style={[type.caption, { color: t.textSecondary }]}>{PLATFORM[s.platform]}{active ? " · active" : ""}</Text>
+                </View>
+                {active ? <Ionicons name="checkmark-circle" size={20} color={t.primary} /> : switchStore.isPending ? <ActivityIndicator color={t.primary} /> : <Text style={[fw(700), { color: t.primary, fontSize: 13 }]}>Switch</Text>}
+              </Pressable>
             );
           })}
           {stores.isError ? <Text style={[type.caption, { color: t.danger, paddingVertical: 8 }]}>{(stores.error as Error).message}</Text> : null}
