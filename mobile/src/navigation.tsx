@@ -9,12 +9,14 @@ import { DashboardScreen } from "./screens/DashboardScreen";
 import { ProductScreen } from "./screens/ProductScreen";
 import { AlertsScreen } from "./screens/AlertsScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
+import { ApiKeysScreen } from "./screens/ApiKeysScreen";
 import { useTheme } from "./theme";
 
 export type RootStackParamList = {
   Tabs: undefined;
   Product: { id: string; title: string };
   Connect: undefined;
+  ApiKeys: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -80,6 +82,7 @@ export function Navigation() {
             <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
             <Stack.Screen name="Product" component={ProductScreen} options={{ title: "Product" }} />
             <Stack.Screen name="Connect" component={ConnectRoute} options={{ title: "Add store" }} />
+            <Stack.Screen name="ApiKeys" component={ApiKeysScreen} options={{ title: "API keys" }} />
           </>
         ) : (
           <Stack.Screen name="Connect" component={ConnectRoute} options={{ headerShown: false }} />

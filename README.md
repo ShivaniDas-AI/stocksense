@@ -182,7 +182,37 @@ track stock for the product, so only the demand forecast and reorder quantity
 are known; the dashboard explains how to turn tracking on). Lead time and
 safety stock are editable per SKU in the dashboard drawer.
 
-## API (session-cookie auth; `?store_id=N` works in dev)
+## Public API (`/v1`, API keys)
+
+A versioned REST API for other tools (spreadsheets, ERPs, BI dashboards,
+scripts) to read a store's forecasts and KPIs.
+
+- **Docs and live console:** `{APP_URL}/docs` (Swagger UI). Spec: `{APP_URL}/v1/openapi.json`.
+- **Keys:** create, copy and revoke in the mobile app under *Settings → API keys*,
+  or `POST /api/keys {name}` with a session. Keys look like `ss_live_...`; only a
+  SHA-256 hash is stored and the full key is shown once. Each key sees one store.
+- **Auth:** `Authorization: Bearer ss_live_...` or `X-API-Key: ss_live_...`.
+- **Limits:** 120 requests per minute per key, with `X-RateLimit-*` headers and `429` + `Retry-After`.
+- **Shapes:** `{ "data": {...} }`, lists add `total`, `has_more`, `next_offset`;
+  errors are `{ "error": { "type", "code", "message" } }`; every response has `X-Request-Id`.
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /v1/store` | The store this key belongs to |
+| `GET /v1/summary` | Risk counts, revenue at risk and inventory KPIs |
+| `GET /v1/products?risk_level=&q=&sort=&limit=&offset=` | Products with risk, stockout date and reorder quantity |
+| `GET /v1/products/{id}?history_days=90` | One product with its 56-day forecast and sales history |
+| `PATCH /v1/products/{id}` | Set `lead_time_days` and/or `safety_stock` |
+| `GET /v1/alerts?unacknowledged=true` | Digest alerts, newest first |
+| `POST /v1/alerts/{id}/acknowledge` | Mark an alert seen |
+| `POST /v1/forecasts` | Queue a fresh forecast (202) |
+| `GET /v1/forecasts/{id}` | Poll the job until `done` or `error` |
+
+```bash
+curl -H "Authorization: Bearer ss_live_..." "$APP_URL/v1/products?risk_level=critical,low_stock&sort=stockout"
+```
+
+## App API (session-cookie or session bearer auth; `?store_id=N` works in dev)
 
 - `GET /api/store` — store + sync status
 - `GET /api/summary` — header cards (SKUs tracked, at risk, critical, revenue at risk)

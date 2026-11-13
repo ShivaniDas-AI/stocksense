@@ -16,6 +16,27 @@ export async function queryOne<T = any>(text: string, params?: any[]): Promise<T
   return rows[0] ?? null;
 }
 
+/**
+ * Idempotent migrations applied at server start, so an existing database
+ * picks up new tables without a manual step. schema.sql has the same DDL
+ * for fresh databases.
+ */
+export async function ensureSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id            BIGSERIAL PRIMARY KEY,
+      store_id      BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      name          TEXT NOT NULL,
+      prefix        TEXT NOT NULL,
+      key_hash      TEXT NOT NULL UNIQUE,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+      last_used_at  TIMESTAMPTZ,
+      revoked_at    TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_api_keys_store ON api_keys (store_id);
+  `);
+}
+
 export interface StoreRow {
   id: number;
   platform: "shopify" | "bigcommerce" | "woocommerce";

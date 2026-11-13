@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StockSense API</title>
+<link rel="icon" href="/dashboard/icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css">
+<style>
+  :root { --brand: #1D4ED8; --ink: #0F172A; --muted: #64748B; --line: #E2E8F0; --soft: #F4F6F9; }
+  body { margin: 0; background: #fff; font-family: "Segoe UI", Inter, -apple-system, Roboto, Arial, sans-serif; color: var(--ink); }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--line); background: #fff; position: sticky; top: 0; z-index: 10; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; }
+  .mark { width: 32px; height: 32px; border-radius: 9px; background: var(--brand); display: grid; place-items: center; }
+  .mark svg { width: 18px; height: 18px; }
+  .pill { font-size: 12px; font-weight: 600; color: var(--brand); background: #E6EEFC; border-radius: 999px; padding: 3px 10px; }
+  header a { color: var(--muted); font-size: 13px; text-decoration: none; margin-left: 16px; }
+  header a:hover { color: var(--brand); }
+  .intro { max-width: 1100px; margin: 0 auto; padding: 24px 24px 0; }
+  .quick { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; font-size: 14px; line-height: 1.55; }
+  .quick code, .quick pre { font-family: Consolas, "Cascadia Mono", Menlo, monospace; font-size: 12.5px; }
+  .quick pre { background: #0F172A; color: #E2E8F0; border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0 0; }
+  .swagger-ui .topbar { display: none; }
+  .swagger-ui .info { margin: 24px 0 12px; }
+  .swagger-ui .info .title { font-family: inherit; }
+  .swagger-ui .opblock-tag { font-family: inherit; }
+  .swagger-ui .btn.authorize { border-color: var(--brand); color: var(--brand); }
+  .swagger-ui .btn.authorize svg { fill: var(--brand); }
+  #ui { max-width: 1100px; margin: 0 auto; padding: 0 8px 48px; }
+  @media (max-width: 640px) { header { padding: 12px 16px; } .intro { padding: 16px 16px 0; } header a { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg></div>
+    StockSense API <span class="pill">v1</span>
+  </div>
+  <nav>
+    <a href="/v1/openapi.json">OpenAPI JSON</a>
+    <a href="/dashboard/">Dashboard</a>
+  </nav>
+</header>
+
+<div class="intro">
+  <div class="quick">
+    <b>Quick start.</b> Create a key in the StockSense app under <i>Settings › API keys</i>, then press
+    <b>Authorize</b> below and paste it to try every endpoint from this page. From code:
+<pre>curl -H "Authorization: Bearer ss_live_..." <span id="base"></span>/v1/products?risk_level=critical,low_stock</pre>
+  </div>
+</div>
+
+<div id="ui"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+<script>
+  document.getElementById("base").textContent = location.origin;
+  window.ui = SwaggerUIBundle({
+    url: "/v1/openapi.json",
+    dom_id: "#ui",
+    deepLinking: true,
+    persistAuthorization: true,
+    tryItOutEnabled: true,
+    displayRequestDuration: true,
+    defaultModelsExpandDepth: 0,
+    docExpansion: "list",
+    // Same-origin calls: point the spec's server at wherever this page is served from.
+    onComplete: () => {
+      const spec = window.ui.specSelectors.specJson().toJS();
+      spec.servers = [{ url: location.origin + "/v1", description: "This server" }];
+      window.ui.specActions.updateJsonSpec(spec);
+    },
+  });
+</script>
+</body>
+</html>

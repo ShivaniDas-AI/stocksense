@@ -113,6 +113,19 @@ CREATE TABLE alerts (
     acknowledged    BOOLEAN DEFAULT FALSE
 );
 
+-- Keys for the public /v1 API. Only the SHA-256 hash of each key is stored.
+CREATE TABLE api_keys (
+    id              BIGSERIAL PRIMARY KEY,
+    store_id        BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    prefix          TEXT NOT NULL,              -- first characters, shown in lists
+    key_hash        TEXT NOT NULL UNIQUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_used_at    TIMESTAMPTZ,
+    revoked_at      TIMESTAMPTZ
+);
+CREATE INDEX idx_api_keys_store ON api_keys (store_id);
+
 CREATE TABLE sync_jobs (
     id              BIGSERIAL PRIMARY KEY,
     store_id        BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,

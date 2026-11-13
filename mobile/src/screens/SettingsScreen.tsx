@@ -76,6 +76,11 @@ export function SettingsScreen() {
           <Row icon="add-circle-outline" toneName="primary" title="Add another store" subtitle="Connect a second Shopify, BigCommerce or WooCommerce store" onPress={() => nav.navigate("Connect")} last />
         </Card>
 
+        <SectionTitle>Developers</SectionTitle>
+        <Card style={{ paddingVertical: 4 }}>
+          <Row icon="key-outline" toneName="primary" title="API keys" subtitle="Connect other tools to this store's forecasts and KPIs" onPress={() => nav.navigate("ApiKeys")} last />
+        </Card>
+
         <SectionTitle>Server</SectionTitle>
         <Card>
           <Input

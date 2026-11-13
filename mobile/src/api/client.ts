@@ -1,5 +1,7 @@
 import type {
   AlertItem,
+  ApiKey,
+  CreatedApiKey,
   ConnectResponse,
   RisksResponse,
   StoreInfo,
@@ -94,4 +96,14 @@ export const api = {
       body: JSON.stringify({ site, consumer_key: consumerKey, consumer_secret: consumerSecret }),
     }),
   health: () => request<{ ok: boolean }>("/health"),
+
+  /* ---------- public API keys ---------- */
+  apiKeys: () => request<{ items: ApiKey[] }>("/api/keys"),
+  createApiKey: (name: string) =>
+    request<CreatedApiKey>("/api/keys", { method: "POST", body: JSON.stringify({ name }) }),
+  revokeApiKey: (id: number) => request<{ ok: boolean }>(`/api/keys/${id}`, { method: "DELETE" }),
 };
+
+export function currentBaseUrl() {
+  return baseUrl;
+}

@@ -121,6 +121,18 @@ export interface StoresResponse {
   stores: { id: string; platform: Platform; store_domain: string }[];
 }
 
+export interface ApiKey {
+  id: number;
+  name: string;
+  prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface CreatedApiKey extends ApiKey {
+  key: string; // full secret, returned only at creation
+}
+
 export interface ConnectResponse {
   ok: boolean;
   token?: string;
