@@ -9,7 +9,7 @@ let md = fs.readFileSync(mdPath, "utf8");
 const svg = fs.readFileSync(svgPath, "utf8");
 
 // Drop the doc's own title and byline; the cover page replaces them.
-md = md.replace(/^# [^\n]*\n+/, "").replace(/^Oct \d+, \d{4}[^\n]*\n+/, "");
+md = md.replace(/^# [^\n]*\n+/, "").replace(/^[A-Z][a-z]{2} \d+, \d{4}[^\n]*\n+/, "");
 // Diagram placeholder from the export -> marker we swap for the SVG.
 md = md.replace(/(&#91;|\[)embedded content:[^\n]*?\\?\]/, "%%DIAGRAM%%");
 
