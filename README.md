@@ -72,6 +72,82 @@ stocksense/
     └── requirements.txt
 ```
 
+## How to start on your laptop and phone
+
+Everything runs on the laptop. The phone app reaches it through the ngrok
+tunnel at `https://shiftless-uncle-occupier.ngrok-free.dev`, so the laptop
+must be on, awake and running the backend whenever you use the app.
+
+**You need:** Docker Desktop, Node.js 20+, ngrok (signed in, with the fixed
+domain) on the laptop, and the **Expo Go** app on the phone (Play Store or
+App Store).
+
+### 1. Start the backend (laptop, every time)
+
+In a terminal in the project folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\start-stocksense.ps1
+```
+
+It starts Docker Desktop, the database, server and worker, waits for the
+server, then starts the ngrok tunnel. It takes about 30 seconds and is safe to
+run twice. Check it: http://localhost:3000/health shows `{"ok":true}`.
+
+Optional, once: run it automatically at every Windows sign-in with
+`powershell -ExecutionPolicy Bypass -File scripts\install-autostart.ps1`
+(see the next sections).
+
+### 2. Use it on the laptop
+
+| What | Address |
+| --- | --- |
+| Web dashboard | http://localhost:3000/dashboard |
+| Connect a store | http://localhost:3000/ |
+| API docs and live console | http://localhost:3000/docs |
+| Mobile app in a browser | http://localhost:8081 (after step 3) |
+
+### 3. Start the mobile app (laptop, second terminal)
+
+The app is in the `mobile` folder; running Expo from the project root fails.
+
+```powershell
+cd mobile
+npm install        # first time only
+npx expo start
+```
+
+Keep this terminal open: Expo Go loads the app from it each time it opens.
+Press **w** to open the app in the laptop's browser.
+
+### 4. Open it on the phone
+
+1. Put the phone on the same Wi-Fi as the laptop (or start Expo with
+   `npx expo start --tunnel` to scan from any network).
+2. Open **Expo Go** and scan the QR code in the terminal (on iPhone, scan it
+   with the Camera app).
+3. The first time, choose the platform on the Connect screen and paste the
+   store's API token. After that the app opens on the dashboard and works on
+   Wi-Fi or mobile data.
+
+### If it does not work
+
+| Symptom | Fix |
+| --- | --- |
+| "Cannot reach the server" | The backend or ngrok is down: run step 1 again |
+| Phone cannot connect at all | Open the ngrok address above in the phone's browser; if it does not load, ngrok is not running on the laptop |
+| QR code does not load the app | Phone and laptop are on different networks: use `npx expo start --tunnel` |
+| "Session expired" | Connect the store again from the app |
+| `ConfigError` about `package.json` | You ran Expo in the project root: `cd mobile` first |
+
+To stop everything: `docker compose stop` in the project folder, close the
+Expo terminal (Ctrl+C), and stop the tunnel with
+`Stop-Process -Name ngrok` in PowerShell.
+
+The app screens cover the dashboard, products, alerts and settings. Purchase
+orders, suppliers, transfers, Ask StockSense and WhatsApp work through the API
+(`/docs`) but have no app screens yet.
+
 ## Quick start (Docker)
 
 ```bash
