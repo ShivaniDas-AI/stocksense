@@ -54,6 +54,8 @@ export const shopify: PlatformAdapter = {
           title: p.title,
           imageUrl: p.image?.src ?? null,
           status: p.status,
+          vendor: p.vendor || null,
+          productType: p.product_type || null,
           variants: (p.variants ?? []).map((v: any) => ({
             externalId: String(v.id),
             sku: v.sku || null,
@@ -82,7 +84,7 @@ export const shopify: PlatformAdapter = {
       status: "any",
       financial_status: "paid",
       created_at_min: sinceISO,
-      fields: "id,created_at,cancelled_at,line_items",
+      fields: "id,created_at,cancelled_at,line_items,location_id",
     };
     while (url) {
       const [data, next] = await shopifyGet(url, store.accessToken, params);
@@ -97,12 +99,48 @@ export const shopify: PlatformAdapter = {
             quantity: li.quantity,
             lineRevenue: parseFloat(li.price) * li.quantity || 0,
             orderedAt: new Date(o.created_at).toISOString(),
+            locationExternalId: o.location_id ? String(o.location_id) : null,
           });
         }
       }
       url = next;
     }
     return lines;
+  },
+
+  /** Needs the read_locations scope; callers fall back to one location without it. */
+  async fetchLocations(store: StoreCreds) {
+    const [data] = await shopifyGet(`${API(store.storeDomain)}/locations.json`, store.accessToken);
+    return (data.locations ?? []).map((l: any) => ({ externalId: String(l.id), name: l.name, active: !!l.active }));
+  },
+
+  async fetchInventoryLevels(store: StoreCreds, variants: { externalId: string; inventoryItemId: string | null }[]) {
+    const byItem = new Map(variants.filter((v) => v.inventoryItemId).map((v) => [String(v.inventoryItemId), v.externalId]));
+    const ids = Array.from(byItem.keys());
+    const out: { variantExternalId: string; locationExternalId: string; onHand: number }[] = [];
+    for (let i = 0; i < ids.length; i += 50) {
+      let url: string | null = `${API(store.storeDomain)}/inventory_levels.json`;
+      let params: any = { inventory_item_ids: ids.slice(i, i + 50).join(","), limit: 250 };
+      while (url) {
+        const [data, next] = await shopifyGet(url, store.accessToken, params);
+        params = undefined;
+        for (const l of data.inventory_levels ?? []) {
+          const vid = byItem.get(String(l.inventory_item_id));
+          if (vid) out.push({ variantExternalId: vid, locationExternalId: String(l.location_id), onHand: Number(l.available ?? 0) });
+        }
+        url = next;
+      }
+    }
+    return out;
+  },
+
+  /** Needs the write_inventory scope. */
+  async adjustInventory(store: StoreCreds, inventoryItemId: string, locationExternalId: string, delta: number) {
+    await axios.post(
+      `${API(store.storeDomain)}/inventory_levels/adjust.json`,
+      { location_id: Number(locationExternalId), inventory_item_id: Number(inventoryItemId), available_adjustment: delta },
+      { headers: headers(store.accessToken) }
+    );
   },
 
   async registerWebhooks(store: StoreCreds, baseUrl: string): Promise<void> {

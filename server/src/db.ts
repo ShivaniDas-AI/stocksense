@@ -1,13 +1,28 @@
-import { Pool, types } from "pg";
+import { AsyncLocalStorage } from "async_hooks";
+import { Pool, PoolClient, types } from "pg";
+import { config } from "./config";
 
 // Return DATE columns as plain "YYYY-MM-DD" strings instead of JS Date objects.
 types.setTypeParser(1082, (v: string) => v);
-import { config } from "./config";
 
 export const pool = new Pool({ connectionString: config.databaseUrl });
 
+/**
+ * Transaction context. Inside withTransaction() every query() call uses the
+ * same client, so a request's writes commit or roll back together without
+ * passing a client around. Sandbox API keys use this to run every write for
+ * real and then roll it back ("reads live data, never saves changes").
+ */
+interface TxContext {
+  client: PoolClient;
+  sandbox: boolean;
+  afterCommit: (() => void | Promise<void>)[];
+}
+const tx = new AsyncLocalStorage<TxContext>();
+
 export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
-  const res = await pool.query(text, params);
+  const ctx = tx.getStore();
+  const res = await (ctx ? ctx.client : pool).query(text, params);
   return res.rows as T[];
 }
 
@@ -17,24 +32,54 @@ export async function queryOne<T = any>(text: string, params?: any[]): Promise<T
 }
 
 /**
- * Idempotent migrations applied at server start, so an existing database
- * picks up new tables without a manual step. schema.sql has the same DDL
- * for fresh databases.
+ * Run fn in one transaction. Nested calls join the outer transaction.
+ * rollback: true runs everything and then rolls back (sandbox mode).
  */
-export async function ensureSchema() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS api_keys (
-      id            BIGSERIAL PRIMARY KEY,
-      store_id      BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-      name          TEXT NOT NULL,
-      prefix        TEXT NOT NULL,
-      key_hash      TEXT NOT NULL UNIQUE,
-      created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-      last_used_at  TIMESTAMPTZ,
-      revoked_at    TIMESTAMPTZ
-    );
-    CREATE INDEX IF NOT EXISTS idx_api_keys_store ON api_keys (store_id);
-  `);
+export async function withTransaction<T>(fn: () => Promise<T>, opts: { rollback?: boolean } = {}): Promise<T> {
+  if (tx.getStore()) return fn();
+  const client = await pool.connect();
+  const ctx: TxContext = { client, sandbox: !!opts.rollback, afterCommit: [] };
+  try {
+    await client.query("BEGIN");
+    const result = await tx.run(ctx, fn);
+    if (ctx.sandbox) {
+      await client.query("ROLLBACK");
+    } else {
+      await client.query("COMMIT");
+      for (const f of ctx.afterCommit) {
+        Promise.resolve()
+          .then(f)
+          .catch((e) => console.error("[afterCommit]", e?.message || e));
+      }
+    }
+    return result;
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Schedule a side effect (email, webhook push, platform write) for after the
+ * current transaction commits. Skipped entirely in sandbox mode; runs at once
+ * outside a transaction.
+ */
+export function afterCommit(fn: () => void | Promise<void>) {
+  const ctx = tx.getStore();
+  if (!ctx) {
+    Promise.resolve()
+      .then(fn)
+      .catch((e) => console.error("[afterCommit]", e?.message || e));
+    return;
+  }
+  if (ctx.sandbox) return;
+  ctx.afterCommit.push(fn);
+}
+
+export function inSandbox(): boolean {
+  return !!tx.getStore()?.sandbox;
 }
 
 export interface StoreRow {
@@ -46,6 +91,8 @@ export interface StoreRow {
   currency: string;
   timezone: string;
   sync_status: string;
+  plan: string;
+  is_demo: boolean;
 }
 
 export async function getStore(id: number): Promise<StoreRow | null> {
@@ -70,3 +117,5 @@ export async function upsertStore(s: {
   );
   return rows[0];
 }
+
+export { ensureSchema } from "./migrations";

@@ -20,6 +20,8 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://stocksense:stocksense@db:5432/stocksense
+      # Local testing only: lets webhooks go to http://host.docker.internal:<port>.
+      WEBHOOKS_ALLOW_HTTP: ${WEBHOOKS_ALLOW_HTTP:-false}
     ports:
       - "3000:3000"
     depends_on:

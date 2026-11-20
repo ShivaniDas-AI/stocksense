@@ -6,6 +6,8 @@ COPY src ./src
 RUN npm run build
 
 FROM node:20-alpine
+# Fonts for the chart images the WhatsApp assistant sends (resvg uses system fonts).
+RUN apk add --no-cache font-dejavu
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json ./

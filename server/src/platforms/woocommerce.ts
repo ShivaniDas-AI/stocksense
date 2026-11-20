@@ -48,6 +48,9 @@ export const woocommerce: PlatformAdapter = {
           title: p.name,
           imageUrl: p.images?.[0]?.src ?? null,
           status: "active",
+          // WooCommerce has no vendor field; brands plugins add one as "brands".
+          vendor: p.brands?.[0]?.name ?? null,
+          productType: p.categories?.[0]?.name ?? null,
           variants: [],
         };
         if (p.type === "variable") {

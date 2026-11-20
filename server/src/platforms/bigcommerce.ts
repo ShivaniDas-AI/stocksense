@@ -47,6 +47,22 @@ export const bigcommerce: PlatformAdapter = {
   async fetchProducts(store: StoreCreds): Promise<PlatformProduct[]> {
     const hash = store.storeHash!;
     const products: PlatformProduct[] = [];
+    // Brand names (the vendor) and category names, looked up once by id.
+    const nameMap = async (path: string) => {
+      const m = new Map<number, string>();
+      try {
+        for (let pg = 1; pg < 50; pg++) {
+          const d = await bcGet(`${V3(hash)}${path}`, store.accessToken, { limit: 250, page: pg });
+          for (const x of d?.data ?? []) m.set(Number(x.id), x.name);
+          if (pg >= (d?.meta?.pagination?.total_pages ?? pg)) break;
+        }
+      } catch {
+        /* missing scope or endpoint: vendors and categories stay empty */
+      }
+      return m;
+    };
+    const brands = await nameMap("/catalog/brands");
+    const categories = await nameMap("/catalog/categories");
     let page = 1;
     for (;;) {
       const data = await bcGet(`${V3(hash)}/catalog/products`, store.accessToken, {
@@ -61,6 +77,8 @@ export const bigcommerce: PlatformAdapter = {
           title: p.name,
           imageUrl: p.images?.[0]?.url_thumbnail ?? null,
           status: p.is_visible ? "active" : "hidden",
+          vendor: p.brand_id ? brands.get(Number(p.brand_id)) ?? null : null,
+          productType: (p.categories ?? []).map((c: number) => categories.get(Number(c))).find(Boolean) ?? null,
           variants: (p.variants ?? []).map((v: any) => ({
             externalId: String(v.id),
             sku: v.sku || p.sku || null,

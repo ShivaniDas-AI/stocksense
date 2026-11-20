@@ -84,10 +84,13 @@ apiRouter.get("/keys", async (req: any, res) => {
   res.json({ items: await listApiKeys(req.storeId) });
 });
 
-/** POST /api/keys { name } — create a key; the full secret is returned only here, once */
+/**
+ * POST /api/keys { name, sandbox? } — create a key; the full secret is
+ * returned only here, once. Sandbox keys read live data but never save.
+ */
 apiRouter.post("/keys", async (req: any, res) => {
   const name = String(req.body?.name || "").trim().slice(0, 60) || "API key";
-  const created = await createApiKey(req.storeId, name);
+  const created = await createApiKey(req.storeId, name, req.body?.sandbox === true ? "sandbox" : "live");
   res.status(201).json(created);
 });
 

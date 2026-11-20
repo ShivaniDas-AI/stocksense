@@ -20,7 +20,10 @@ export const config = {
   shopify: {
     apiKey: process.env.SHOPIFY_API_KEY || "",
     apiSecret: process.env.SHOPIFY_API_SECRET || "",
-    scopes: "read_products,read_orders,read_inventory",
+    // read_locations: stock per location; write_inventory: received purchase
+    // orders are added to Shopify stock. Existing installs keep their old
+    // scopes until the merchant re-approves the app.
+    scopes: "read_products,read_orders,read_inventory,read_locations,write_inventory",
     apiVersion: "2025-07",
   },
 
@@ -33,4 +36,28 @@ export const config = {
 
   // How many months of order history to backfill on install
   backfillMonths: parseInt(process.env.BACKFILL_MONTHS || "18", 10),
+
+  // SMS alerts (Settings > Notifications). Empty = SMS reports "not configured".
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID || "",
+    authToken: process.env.TWILIO_AUTH_TOKEN || "",
+    from: process.env.TWILIO_FROM || "",
+  },
+
+  // WhatsApp Cloud API (Meta). The assistant and WhatsApp alerts need these.
+  whatsapp: {
+    token: process.env.WHATSAPP_TOKEN || "",
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
+    businessNumber: process.env.WHATSAPP_BUSINESS_NUMBER || "", // shown in the link instructions, e.g. +15551234567
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "",
+    appSecret: process.env.WHATSAPP_APP_SECRET || "", // checks X-Hub-Signature-256 on incoming webhooks
+    alertTemplate: process.env.WHATSAPP_ALERT_TEMPLATE || "", // approved template for alerts outside the 24h window
+    graphVersion: process.env.WHATSAPP_GRAPH_VERSION || "v21.0",
+  },
+
+  // Ask StockSense (and AI answers on WhatsApp).
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY || "",
+    model: process.env.ASK_MODEL || "",
+  },
 };

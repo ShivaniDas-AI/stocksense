@@ -37,16 +37,16 @@
     StockSense API <span class="pill">v1</span>
   </div>
   <nav>
-    <a href="/v1/openapi.json">OpenAPI JSON</a>
+    <a href="/api/v1/openapi.json">OpenAPI JSON</a>
     <a href="/dashboard/">Dashboard</a>
   </nav>
 </header>
 
 <div class="intro">
   <div class="quick">
-    <b>Quick start.</b> Create a key in the StockSense app under <i>Settings › API keys</i>, then press
+    <b>Quick start.</b> Create a key in StockSense under <i>Settings › API &amp; webhooks</i> (or the app's Settings › API keys), then press
     <b>Authorize</b> below and paste it to try every endpoint from this page. From code:
-<pre>curl -H "Authorization: Bearer ss_live_..." <span id="base"></span>/v1/products?risk_level=critical,low_stock</pre>
+<pre>curl -H "Authorization: Bearer ss_live_..." <span id="base"></span>/api/v1/forecasts?status=reorder_now</pre>
   </div>
 </div>
 
@@ -56,7 +56,7 @@
 <script>
   document.getElementById("base").textContent = location.origin;
   window.ui = SwaggerUIBundle({
-    url: "/v1/openapi.json",
+    url: "/api/v1/openapi.json",
     dom_id: "#ui",
     deepLinking: true,
     persistAuthorization: true,
@@ -67,7 +67,7 @@
     // Same-origin calls: point the spec's server at wherever this page is served from.
     onComplete: () => {
       const spec = window.ui.specSelectors.specJson().toJS();
-      spec.servers = [{ url: location.origin + "/v1", description: "This server" }];
+      spec.servers = [{ url: location.origin + "/api/v1", description: "This server" }];
       window.ui.specActions.updateJsonSpec(spec);
     },
   });

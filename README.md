@@ -182,35 +182,66 @@ track stock for the product, so only the demand forecast and reorder quantity
 are known; the dashboard explains how to turn tracking on). Lead time and
 safety stock are editable per SKU in the dashboard drawer.
 
-## Public API (`/v1`, API keys)
+## REST API (`/api/v1`) and webhooks
 
-A versioned REST API for other tools (spreadsheets, ERPs, BI dashboards,
-scripts) to read a store's forecasts and KPIs.
+The API from chapter 14 of the user guide, plus every other feature in the
+guide. Base URL `{APP_URL}/api/v1` (also served at `/v1` for earlier
+integrations). Interactive docs with a live console: `{APP_URL}/docs`;
+spec: `{APP_URL}/api/v1/openapi.json`.
 
-- **Docs and live console:** `{APP_URL}/docs` (Swagger UI). Spec: `{APP_URL}/v1/openapi.json`.
-- **Keys:** create, copy and revoke in the mobile app under *Settings → API keys*,
-  or `POST /api/keys {name}` with a session. Keys look like `ss_live_...`; only a
-  SHA-256 hash is stored and the full key is shown once. Each key sees one store.
-- **Auth:** `Authorization: Bearer ss_live_...` or `X-API-Key: ss_live_...`.
-- **Limits:** 120 requests per minute per key, with `X-RateLimit-*` headers and `429` + `Retry-After`.
-- **Shapes:** `{ "data": {...} }`, lists add `total`, `has_more`, `next_offset`;
-  errors are `{ "error": { "type", "code", "message" } }`; every response has `X-Request-Id`.
+- **Keys (Pro):** `ss_live_...` reads and writes; **sandbox** `ss_test_...` reads
+  live data but rolls back every write (responses say `"sandbox": true`). Create
+  and revoke with the app session (`POST /api/v1/api-keys {name, sandbox}`, or
+  the mobile app's Settings > API keys). Only a SHA-256 hash is stored; the full
+  key is shown once; each key sees one store. The StockSense app's own session
+  token is also accepted, without the Pro requirement.
+- **Auth:** `Authorization: Bearer <key>` or `X-API-Key: <key>`. 120 requests a
+  minute per key (`X-RateLimit-*`, `429` + `Retry-After`).
+- **Shapes:** `{ "data": {...} }`; lists `{ "data": [...], "page", "limit", "total", "has_more" }`;
+  errors `{ "error": { "type", "code", "message", "field"? } }`; `402` = not in the plan;
+  every response has `X-Request-Id`. Writes run in one transaction.
 
-| Method and path | Purpose |
+| Area | Endpoints |
 | --- | --- |
-| `GET /v1/store` | The store this key belongs to |
-| `GET /v1/summary` | Risk counts, revenue at risk and inventory KPIs |
-| `GET /v1/products?risk_level=&q=&sort=&limit=&offset=` | Products with risk, stockout date and reorder quantity |
-| `GET /v1/products/{id}?history_days=90` | One product with its 56-day forecast and sales history |
-| `PATCH /v1/products/{id}` | Set `lead_time_days` and/or `safety_stock` |
-| `GET /v1/alerts?unacknowledged=true` | Digest alerts, newest first |
-| `POST /v1/alerts/{id}/acknowledge` | Mark an alert seen |
-| `POST /v1/forecasts` | Queue a fresh forecast (202) |
-| `GET /v1/forecasts/{id}` | Poll the job until `done` or `error` |
+| Forecasts | `GET /forecasts?status=&location_id=&q=&sort=&limit=(≤250)&page=`, `GET /forecasts.csv`, `GET /forecasts/{variantId}` (daily series, 80% band, stock curve), `PATCH /forecasts/{variantId}/settings`, `POST /forecasts/rebuild`, `GET /jobs/{id}` |
+| Reorder | `GET /reorder/{variantId}?supplier_id=&coverage_days=&lead_time_days=&case_pack=&min_order_qty=`, `POST /reorder/{variantId}/preferences`, `POST /reorder/{variantId}/purchase-order` |
+| Purchase orders | `GET/POST /purchase-orders`, `GET/PATCH /purchase-orders/{id}`, `POST /purchase-orders/{id} {"action": "approve"\|"send"\|"cancel"\|"receive"}`, `GET /purchase-orders/{id}/csv`, `POST /purchase-orders/refresh-drafts` |
+| Suppliers | `GET /suppliers`, `POST /suppliers` (create, or update with `id`), `GET/PATCH/DELETE /suppliers/{id}`, `GET /vendors`, `GET /categories` |
+| Alerts | `GET /alerts?status=open\|dismissed\|resolved&type=`, `GET /alerts/{id}`, `POST /alerts/{id} {"action": "dismiss"\|"reopen"}`, `POST /alerts/check` |
+| Locations, transfers | `GET/POST /locations`, `PATCH /locations/{id}`, `GET/PUT /locations/{id}/inventory`, `GET /transfers/suggestions`, `GET/POST /transfers`, `GET /transfers/{id}`, `POST /transfers/{id} {"action": "ship"\|"receive"\|"cancel"}` |
+| Insights, plan | `GET /dashboard?location_id=`, `GET /summary`, `GET /store`, `GET /plan` |
+| Settings | `GET/PATCH /settings/forecasting`, `GET/PATCH /settings/notifications`, `POST /settings/notifications/test`, `GET/POST /promotions`, `PATCH/DELETE /promotions/{id}` |
+| Webhooks | `GET/POST /webhooks`, `PATCH/DELETE /webhooks/{id}`, `POST /webhooks/{id}/test`, `GET /webhooks/{id}/deliveries` |
+| Data & sync | `GET /data/status`, `POST /data/rebuild`, `POST /data/reimport`, `POST/DELETE /data/demo` |
+| Ask StockSense | `POST /ask`, `GET /ask/usage`, `GET/POST/DELETE /ask/conversations`, `GET/PATCH/DELETE /ask/conversations/{id}`, `POST /ask/conversations/{id}/messages` |
+| WhatsApp | `GET /whatsapp`, `POST /whatsapp/link-codes`, `GET /whatsapp/numbers`, `PATCH/DELETE /whatsapp/numbers/{id}`, `GET /whatsapp/activity`, `POST /whatsapp/simulate` |
+| Products (v1 shape) | `GET /products`, `GET/PATCH /products/{id}` |
+
+**Webhooks** (Pro): events `alert.stockout_risk`, `alert.reorder_point`,
+`alert.velocity_shift`, `alert.lead_time_drift`, `alert.overstock`,
+`purchase_order.approved`, `purchase_order.sent`, `purchase_order.received`
+(or `*`). Each delivery carries `X-StockSense-Timestamp` and
+`X-StockSense-Signature: sha256=hex(HMAC_SHA256(secret, timestamp + "." + body))`;
+failures are retried after 30 s, 5 min, 30 min and 2 h.
 
 ```bash
-curl -H "Authorization: Bearer ss_live_..." "$APP_URL/v1/products?risk_level=critical,low_stock&sort=stockout"
+curl -H "Authorization: Bearer ss_live_..." "$APP_URL/api/v1/forecasts?status=reorder_now"
+curl -X POST -H "Authorization: Bearer ss_live_..." -H "Content-Type: application/json" \
+  -d '{"supplier_id": 3, "lines": [{"variant_id": 41, "quantity": 120}]}' "$APP_URL/api/v1/purchase-orders"
 ```
+
+**Server settings for the optional parts** (`.env`): `ANTHROPIC_API_KEY`
+(Ask StockSense and AI answers on WhatsApp; `ASK_MODEL` overrides the model),
+`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_NUMBER`,
+`WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_ALERT_TEMPLATE`
+(the Meta webhook URL is `{APP_URL}/webhooks/whatsapp`), `TWILIO_ACCOUNT_SID`,
+`TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (SMS alerts), `RESEND_API_KEY` (email alerts
+and purchase orders to suppliers). Without them those features report that
+they are not configured; everything else works.
+
+**Tests:** `python -I server/test/api_e2e.py` runs 107 end-to-end checks against
+a demo store (start the server with `WEBHOOKS_ALLOW_HTTP=true docker compose up -d server`
+so the local webhook receiver can be used).
 
 ## App API (session-cookie or session bearer auth; `?store_id=N` works in dev)
 
