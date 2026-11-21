@@ -16,6 +16,8 @@ import { AlertsScreen } from "./screens/AlertsScreen";
 import { WhatsAppScreen } from "./screens/WhatsAppScreen";
 import { WhatsAppChatScreen } from "./screens/WhatsAppChatScreen";
 import { AskScreen } from "./screens/AskScreen";
+import { MetricScreen } from "./screens/MetricScreen";
+import type { KpiMetric } from "./api/types";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { ApiKeysScreen } from "./screens/ApiKeysScreen";
 import { useTheme } from "./theme";
@@ -27,6 +29,7 @@ export type RootStackParamList = {
   PurchaseOrder: { id: number; title: string };
   WhatsAppChat: undefined;
   Ask: { prompt?: string } | undefined;
+  Metric: { metric: KpiMetric; title: string };
   Connect: undefined;
   ApiKeys: undefined;
 };
@@ -104,6 +107,7 @@ export function Navigation() {
             <Stack.Screen name="PurchaseOrder" component={PurchaseOrderScreen} options={({ route }) => ({ title: route.params.title })} />
             <Stack.Screen name="WhatsAppChat" component={WhatsAppChatScreen} options={{ title: "WhatsApp chat" }} />
             <Stack.Screen name="Ask" component={AskScreen} options={{ title: "Ask StockSense" }} />
+            <Stack.Screen name="Metric" component={MetricScreen} options={({ route }) => ({ title: route.params.title })} />
             <Stack.Screen name="Connect" component={ConnectRoute} options={{ title: "Add store" }} />
             <Stack.Screen name="ApiKeys" component={ApiKeysScreen} options={{ title: "API keys" }} />
           </>

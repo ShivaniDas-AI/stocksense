@@ -33,7 +33,7 @@ export function dateLabel(v: string | null | undefined): string {
 
 export function days(v: number | string | null | undefined): string {
   if (v === null || v === undefined) return "-";
-  return `${Math.round(Number(v))} d`;
+  return Number(v) > 365 ? "1 yr+" : `${Math.round(Number(v))} d`;
 }
 
 /** "just now", "5 min ago", "2 h ago" from a timestamp in ms. */

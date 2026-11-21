@@ -210,7 +210,7 @@ export function StockChart({
 }
 
 /** Horizontal bars, e.g. days of cover per product. */
-export function HBars({ rows, unit, max: maxIn, onPress }: { rows: { label: string; value: number; color: string; note?: string }[]; unit: string; max?: number; onPress?: (index: number) => void }) {
+export function HBars({ rows, unit, max: maxIn, onPress, format }: { rows: { label: string; value: number; color: string; note?: string }[]; unit: string; max?: number; onPress?: (index: number) => void; format?: (v: number) => string }) {
   const t = useTheme();
   const max = maxIn ?? Math.max(1, ...rows.map((r) => r.value));
   return (
@@ -219,10 +219,10 @@ export function HBars({ rows, unit, max: maxIn, onPress }: { rows: { label: stri
         <Pressable key={`${r.label}-${i}`} disabled={!onPress} onPress={() => onPress?.(i)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
             <Text style={[type.captionStrong, { color: t.text, flex: 1, marginRight: 8 }]} numberOfLines={1}>{r.label}</Text>
-            <Text style={[fw(700), { color: r.color, fontSize: 13 }]}>{Math.round(r.value)} {unit}</Text>
+            <Text style={[fw(700), { color: r.color, fontSize: 13 }]}>{format ? format(r.value) : `${Math.round(r.value)} ${unit}`}</Text>
           </View>
           <View style={{ height: 8, borderRadius: 4, backgroundColor: t.surfaceAlt, overflow: "hidden" }}>
-            <View style={{ width: `${Math.max(3, Math.min(100, (r.value / max) * 100))}%`, height: 8, borderRadius: 4, backgroundColor: r.color }} />
+            <View style={{ width: `${r.value > 0 ? Math.max(3, Math.min(100, (r.value / max) * 100)) : 0}%`, height: 8, borderRadius: 4, backgroundColor: r.color }} />
           </View>
           {r.note ? <Text style={[type.caption, { color: t.textMuted, marginTop: 3 }]}>{r.note}</Text> : null}
         </Pressable>

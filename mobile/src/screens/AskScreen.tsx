@@ -90,7 +90,7 @@ export function AskScreen({ route }: Props) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
-      <ScrollView ref={scroll} contentContainerStyle={{ padding: space.lg, paddingBottom: space.xl, maxWidth: 760, width: "100%", alignSelf: "center" }} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
+      <ScrollView ref={scroll} contentContainerStyle={{ padding: space.lg, paddingBottom: space.xl, maxWidth: 760, width: "100%", alignSelf: "center" }} onContentSizeChange={() => { if (msgs.length) scroll.current?.scrollToEnd({ animated: true }); }}>
         {msgs.length === 0 ? (
           <View>
             <View style={{ alignItems: "center", marginVertical: space.lg }}>
@@ -107,11 +107,7 @@ export function AskScreen({ route }: Props) {
                 </Text>
               ) : null}
             </View>
-            {notConfigured ? (
-              <Notice icon="key-outline" toneName="warning" title="Not switched on yet">
-                Ask StockSense needs an Anthropic API key on the server (ANTHROPIC_API_KEY in .env, then restart the server). Everything else in the app works without it.
-              </Notice>
-            ) : null}
+            {notConfigured ? <KeySetup /> : null}
             {limitReached ? <Notice icon="lock-closed-outline" toneName="warning" title="Monthly limit reached">{`Questions reset on ${u?.resets_on}. Pro includes unlimited questions.`}</Notice> : null}
             <Text style={[type.label, { color: t.textMuted, marginTop: space.md, marginBottom: space.sm }]}>Try asking</Text>
             {SUGGESTIONS.map((s) => (
@@ -181,5 +177,42 @@ export function AskScreen({ route }: Props) {
         </Pressable>
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+/**
+ * How to switch Ask StockSense on. The key lives only on the server, never in
+ * the app, so it is set in the server's .env file.
+ */
+export function KeySetup() {
+  const t = useTheme();
+  const steps: { title: string; body: string; code?: string }[] = [
+    { title: "Get a key", body: "Sign in at console.anthropic.com, open API keys and create one. It starts with sk-ant-. Set a monthly spend limit there too." },
+    { title: "Add it to the server", body: "On the laptop, open the .env file in the StockSense project folder and fill in this line:", code: "ANTHROPIC_API_KEY=sk-ant-..." },
+    { title: "Restart the server", body: "In a terminal in the project folder, run:", code: "docker compose up -d --force-recreate server" },
+    { title: "Done", body: "Come back here and ask a question. The same key also turns on AI answers on WhatsApp." },
+  ];
+  return (
+    <Card style={{ borderColor: t.warning, marginBottom: space.md }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: space.md }}>
+        <Ionicons name="key-outline" size={18} color={t.warning} style={{ marginRight: 8 }} />
+        <Text style={[type.bodyStrong, { color: t.text, flex: 1 }]}>Switch on Ask StockSense</Text>
+      </View>
+      {steps.map((s, i) => (
+        <View key={s.title} style={{ flexDirection: "row", marginBottom: i < steps.length - 1 ? space.md : 0 }}>
+          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: t.primarySoft, alignItems: "center", justifyContent: "center", marginRight: 10, marginTop: 1 }}>
+            <Text style={[fw(700), { color: t.primary, fontSize: 12 }]}>{i + 1}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[type.captionStrong, { color: t.text }]}>{s.title}</Text>
+            <Text style={[type.caption, { color: t.textSecondary, marginTop: 2 }]}>{s.body}</Text>
+            {s.code ? (
+              <Text selectable style={[type.mono, { color: t.text, backgroundColor: t.surfaceAlt, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 6, marginTop: 6, overflow: "hidden" }]}>{s.code}</Text>
+            ) : null}
+          </View>
+        </View>
+      ))}
+      <Text style={[type.caption, { color: t.textMuted, marginTop: space.md }]}>The key stays on your server; the app never sees it. Everything else in StockSense works without it.</Text>
+    </Card>
   );
 }

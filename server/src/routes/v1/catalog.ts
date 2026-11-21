@@ -3,6 +3,7 @@ import { Router } from "express";
 import { queryOne } from "../../db";
 import { PLANS, storePlan } from "../../plans";
 import { getDashboard, planUsage } from "../../services/dashboard";
+import { getKpiDetail } from "../../services/insights";
 import { notFound } from "../../services/errors";
 import {
   forecastsCsv, getForecastDetail, listForecasts, updateOrderingSettings,
@@ -62,6 +63,7 @@ export function registerCatalog(r: Router) {
   }));
 
   r.get("/dashboard", h(async (req) => one(await getDashboard(req.storeId!, { location_id: intQuery(req, "location_id", { min: 1 }) }))));
+  r.get("/kpis/:metric", h(async (req) => one(await getKpiDetail(req.storeId!, String(req.params.metric)))));
 
   /* ---------- forecasts (guide chapters 4 and 5) ---------- */
   r.get("/forecasts.csv", (req: Req, res, next) => {

@@ -406,3 +406,18 @@ export interface AskChart {
 export interface AskAnswer { conversation_id: number; answer: string; charts?: AskChart[] }
 export interface AskUsage { plan: string; questions_this_month: number; monthly_limit: number | null; remaining: number | null; resets_on: string; configured: boolean }
 export interface AskConversation { id: number; title: string; messages: number; updated_at: string }
+
+/* ---------- key number details (/api/v1/kpis/{metric}) ---------- */
+
+export type KpiMetric = "sales" | "forecast" | "accuracy" | "cover" | "overstock" | "protected" | "at_risk";
+export type KpiUnit = "money" | "units" | "percent" | "days" | "count" | "text" | "date";
+export interface KpiDetail {
+  metric: KpiMetric;
+  title: string;
+  summary: string;
+  currency: string;
+  run_date: string | null;
+  headline: { label: string; value: number | null; unit: KpiUnit; sub?: string; change_pct?: number | null }[];
+  charts: { type: "line" | "bar" | "hbar"; title: string; caption?: string; unit: KpiUnit; series: { name: string; style?: string; points: { x: string; y: number }[] }[] }[];
+  tables: { title: string; caption?: string; columns: { key: string; label: string; unit?: KpiUnit }[]; rows: Record<string, any>[] }[];
+}

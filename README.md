@@ -144,7 +144,7 @@ To stop everything: `docker compose stop` in the project folder, close the
 Expo terminal (Ctrl+C), and stop the tunnel with
 `Stop-Process -Name ngrok` in PowerShell.
 
-The app has five tabs: **Home** (status counts, key numbers, weekly sales and
+The app has five tabs: **Home** (status counts, key numbers that open a detail screen with figures and charts, weekly sales and
 forecast chart, running low, products), **Orders** (purchase orders and
 suppliers), **Alerts** (the five alert types, dismiss and reopen), **WhatsApp**
 (link a phone, roles, activity, and a chat preview that runs the real assistant)
@@ -289,7 +289,7 @@ spec: `{APP_URL}/api/v1/openapi.json`.
 | Suppliers | `GET /suppliers`, `POST /suppliers` (create, or update with `id`), `GET/PATCH/DELETE /suppliers/{id}`, `GET /vendors`, `GET /categories` |
 | Alerts | `GET /alerts?status=open\|dismissed\|resolved&type=`, `GET /alerts/{id}`, `POST /alerts/{id} {"action": "dismiss"\|"reopen"}`, `POST /alerts/check` |
 | Locations, transfers | `GET/POST /locations`, `PATCH /locations/{id}`, `GET/PUT /locations/{id}/inventory`, `GET /transfers/suggestions`, `GET/POST /transfers`, `GET /transfers/{id}`, `POST /transfers/{id} {"action": "ship"\|"receive"\|"cancel"}` |
-| Insights, plan | `GET /dashboard?location_id=`, `GET /summary`, `GET /store`, `GET /plan` |
+| Insights, plan | `GET /dashboard?location_id=`, `GET /kpis/{metric}` (detail behind each number: sales, forecast, accuracy, cover, overstock, protected, at_risk), `GET /summary`, `GET /store`, `GET /plan` |
 | Settings | `GET/PATCH /settings/forecasting`, `GET/PATCH /settings/notifications`, `POST /settings/notifications/test`, `GET/POST /promotions`, `PATCH/DELETE /promotions/{id}` |
 | Webhooks | `GET/POST /webhooks`, `PATCH/DELETE /webhooks/{id}`, `POST /webhooks/{id}/test`, `GET /webhooks/{id}/deliveries` |
 | Data & sync | `GET /data/status`, `POST /data/rebuild`, `POST /data/reimport`, `POST/DELETE /data/demo` |

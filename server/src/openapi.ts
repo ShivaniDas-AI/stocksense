@@ -38,6 +38,7 @@ export function openApiSpec() {
         responses: { "200": ok("Dashboard", data(ref("Dashboard"))) },
       },
     },
+    "/kpis/{metric}": { get: { tags: ["Insights"], operationId: "getKpiDetail", summary: "Detail behind a dashboard number: headline figures, chart series and tables (metric: sales, forecast, accuracy, cover, overstock, protected, at_risk)", parameters: [{ name: "metric", in: "path", required: true, schema: { type: "string", enum: ["sales", "forecast", "accuracy", "cover", "overstock", "protected", "at_risk"] } }], responses: { "200": ok("Detail", data({ type: "object" })), "400": err("Unknown metric") } } },
     "/summary": { get: { tags: ["Insights"], operationId: "getSummary", summary: "Risk counts, revenue at risk and inventory KPIs", responses: { "200": ok("Summary", data({ type: "object" })) } } },
 
     /* ---------- forecasts ---------- */
@@ -254,7 +255,7 @@ export function openApiSpec() {
     openapi: "3.1.0",
     info: {
       title: "StockSense API",
-      version: "1.1.0",
+      version: "1.2.0",
       description: [
         "Read forecasts and alerts, run the reorder calculation, manage purchase orders, suppliers, transfers and promotions, receive signed webhooks, and drive Ask StockSense and the WhatsApp assistant.",
         "",

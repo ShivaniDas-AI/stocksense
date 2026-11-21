@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../api/client";
-import type { ForecastRow } from "../api/types";
+import type { ForecastRow, KpiMetric } from "../api/types";
 import { Avatar, Button, Card, Chip, KpiTile, Notice, OptionSheet, Pill, SectionTitle, StatusBadge, StatusView, Thumb } from "../components/ui";
 import { DashboardSkeleton } from "../components/Skeleton";
 import { StatusBar } from "../components/StatusBar";
@@ -130,6 +130,7 @@ export function DashboardScreen() {
   const watch = counts.watch ?? 0;
   const name = storeV1.data?.name || storeName(s.store_domain);
   const pick = (st: Status) => { haptic.tap(); setFilter(st); };
+  const openMetric = (metric: KpiMetric, title: string) => { haptic.tap(); nav.navigate("Metric", { metric, title }); };
   const openProduct = (id: number | string, title: string) => { haptic.tap(); nav.navigate("Product", { id: String(id), title }); };
 
   const header = (
@@ -160,15 +161,16 @@ export function DashboardScreen() {
             <Text style={[type.display, { color: reorderNow > 0 ? t.danger : t.success, marginTop: 4 }]}>{num(reorderNow)}</Text>
             <View style={{ flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
               <Pill toneName="warning">{`${watch} to watch`}</Pill>
-              {cards?.need_reordering.draft_purchase_orders ? <Pill toneName="primary" icon="document-text-outline">{`${cards.need_reordering.draft_purchase_orders} drafts`}</Pill> : null}
+              {cards?.need_reordering.draft_purchase_orders ? <Pill toneName="primary" icon="document-text-outline">{`${cards.need_reordering.draft_purchase_orders} ${cards.need_reordering.draft_purchase_orders === 1 ? "draft" : "drafts"}`}</Pill> : null}
             </View>
           </Pressable>
           <View style={{ width: 1, backgroundColor: t.border, marginHorizontal: space.lg }} />
-          <View style={{ flex: 1 }}>
+          <Pressable style={{ flex: 1 }} onPress={() => openMetric("at_risk", "Revenue at risk")}>
             <Text style={[type.label, { color: t.textMuted }]}>Revenue at risk</Text>
             <Text style={[type.display, { color: t.text, marginTop: 4 }]} numberOfLines={1} adjustsFontSizeToFit>{money(sm.revenue_at_risk, currency)}</Text>
             <Text style={[type.caption, { color: t.textSecondary, marginTop: 6 }]}>on products to reorder now, over the next 8 weeks</Text>
-          </View>
+            <Text style={[fw(600), { color: t.primary, fontSize: 12, marginTop: 6 }]}>See all at risk ›</Text>
+          </Pressable>
         </View>
         <View style={{ marginTop: space.lg, paddingTop: space.md, borderTopWidth: 1, borderTopColor: t.border }}>
           <StatusBar counts={counts} onPick={pick} />
@@ -189,10 +191,10 @@ export function DashboardScreen() {
       </Card>
 
       {/* KPIs */}
-      <SectionTitle>Key numbers</SectionTitle>
+      <SectionTitle action={<Text style={[type.caption, { color: t.textMuted }]}>Tap one for detail</Text>}>Key numbers</SectionTitle>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-        {k ? <KpiTile label="Sales · 30 days" icon="trending-up-outline" toneName="success" value={money(k.sales_30d.revenue, currency)} sub={`${num(k.sales_30d.units)} units`} delta={salesDelta != null ? { value: salesDelta } : null} /> : null}
-        {k ? <KpiTile label="Forecast · 30 days" icon="analytics-outline" toneName="primary" value={money(k.forecast_30d.revenue, currency)} sub={`${num(k.forecast_30d.units)} units expected`} /> : null}
+        {k ? <KpiTile label="Sales · 30 days" icon="trending-up-outline" toneName="success" value={money(k.sales_30d.revenue, currency)} sub={`${num(k.sales_30d.units)} units`} delta={salesDelta != null ? { value: salesDelta } : null} onPress={() => openMetric("sales", "Sales")} /> : null}
+        {k ? <KpiTile label="Forecast · 30 days" icon="analytics-outline" toneName="primary" value={money(k.forecast_30d.revenue, currency)} sub={`${num(k.forecast_30d.units)} units expected`} onPress={() => openMetric("forecast", "Forecast")} /> : null}
         {cards ? (
           <KpiTile
             label="Forecast accuracy"
@@ -200,11 +202,12 @@ export function DashboardScreen() {
             toneName={cards.forecast_accuracy.value != null && cards.forecast_accuracy.value >= 70 ? "success" : "warning"}
             value={cards.forecast_accuracy.value != null ? `${Math.round(cards.forecast_accuracy.value)}%` : "-"}
             sub={cards.forecast_accuracy.value != null ? "last 4 weeks, actual vs forecast" : "needs a few weeks of regular sales"}
+            onPress={() => openMetric("accuracy", "Forecast accuracy")}
           />
         ) : null}
-        {k ? <KpiTile label="Days of cover" icon="hourglass-outline" toneName={k.median_cover_days != null && k.median_cover_days < 14 ? "warning" : "neutral"} value={k.median_cover_days != null ? `${k.median_cover_days} d` : "-"} sub="median across products" /> : null}
-        {cards ? <KpiTile label="Cash in overstock" icon="layers-outline" toneName={cards.cash_in_overstock.value > 0 ? "info" : "neutral"} value={money(cards.cash_in_overstock.value, currency)} sub={`${num(cards.cash_in_overstock.units)} units past ${cards.cash_in_overstock.overstock_days} days · at ${cards.cash_in_overstock.basis}`} onPress={() => pick("overstocked")} /> : null}
-        {cards ? <KpiTile label="Revenue protected" icon="shield-checkmark-outline" toneName="success" value={money(cards.revenue_protected.value, currency)} sub={`${cards.revenue_protected.alerts} ${cards.revenue_protected.alerts === 1 ? "alert" : "alerts"} fixed · last ${cards.revenue_protected.period_days} days`} /> : null}
+        {k ? <KpiTile label="Days of cover" icon="hourglass-outline" toneName={k.median_cover_days != null && k.median_cover_days < 14 ? "warning" : "neutral"} value={k.median_cover_days != null ? `${k.median_cover_days} d` : "-"} sub="median across products" onPress={() => openMetric("cover", "Days of cover")} /> : null}
+        {cards ? <KpiTile label="Cash in overstock" icon="layers-outline" toneName={cards.cash_in_overstock.value > 0 ? "info" : "neutral"} value={money(cards.cash_in_overstock.value, currency)} sub={`${num(cards.cash_in_overstock.units)} units past ${cards.cash_in_overstock.overstock_days} days · at ${cards.cash_in_overstock.basis}`} onPress={() => openMetric("overstock", "Cash in overstock")} /> : null}
+        {cards ? <KpiTile label="Revenue protected" icon="shield-checkmark-outline" toneName="success" value={money(cards.revenue_protected.value, currency)} sub={`${cards.revenue_protected.alerts} ${cards.revenue_protected.alerts === 1 ? "alert" : "alerts"} fixed · last ${cards.revenue_protected.period_days} days`} onPress={() => openMetric("protected", "Revenue protected")} /> : null}
       </View>
 
       {dash.data?.units_sold_vs_forecast?.length ? (

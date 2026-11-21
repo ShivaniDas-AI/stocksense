@@ -26,6 +26,8 @@ import type {
   ReorderPlan,
   AskAnswer,
   AskUsage,
+  KpiDetail,
+  KpiMetric,
 } from "./types";
 
 /**
@@ -132,6 +134,7 @@ export const api = {
 
   /* ---------- charts (public API, same session) ---------- */
   dashboardV1: () => v1<DashboardV1>("/dashboard"),
+  kpi: (metric: KpiMetric) => v1<KpiDetail>(`/kpis/${metric}`),
   forecastV1: (variantId: string) => v1<ForecastDetailV1>(`/forecasts/${variantId}`),
 
   /* ---------- WhatsApp assistant ---------- */

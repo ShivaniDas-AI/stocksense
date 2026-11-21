@@ -27,6 +27,7 @@ export function SettingsScreen() {
 
   const stores = useQuery({ queryKey: ["stores"], queryFn: api.stores });
   const plan = useQuery({ queryKey: ["plan"], queryFn: api.plan, retry: 0 });
+  const askUsage = useQuery({ queryKey: ["askUsage"], queryFn: api.askUsage, retry: 0 });
   const switchStore = useMutation({
     mutationFn: (id: string) => api.switchStore(id),
     // Reset (not clear) so active screens refetch straight away for the new store.
@@ -103,7 +104,7 @@ export function SettingsScreen() {
 
         <SectionTitle>Assistants</SectionTitle>
         <Card style={{ paddingVertical: 4 }}>
-          <Row icon="sparkles-outline" toneName="primary" title="Ask StockSense" subtitle="Questions in your own words, answered from live forecasts" onPress={() => nav.navigate("Ask")} />
+          <Row icon="sparkles-outline" toneName="primary" title="Ask StockSense" subtitle={askUsage.data && !askUsage.data.configured ? "Not switched on: tap to see how to add the AI key" : "Questions in your own words, answered from live forecasts"} onPress={() => nav.navigate("Ask")} right={askUsage.data ? <Pill toneName={askUsage.data.configured ? "success" : "warning"}>{askUsage.data.configured ? "On" : "Needs key"}</Pill> : undefined} />
           <Row icon="logo-whatsapp" toneName="success" title="WhatsApp chat" subtitle="Try the WhatsApp assistant right here" onPress={() => nav.navigate("WhatsAppChat")} last />
         </Card>
 
