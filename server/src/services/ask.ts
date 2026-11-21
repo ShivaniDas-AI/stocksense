@@ -4,7 +4,8 @@
  * draft purchase orders. On WhatsApp every change becomes an approval
  * request instead of happening directly.
  *
- * The AI is Google Gemini (GEMINI_API_KEY, see aiGemini.ts) or Claude
+ * The AI is OpenAI (OPENAI_API_KEY, see aiOpenAI.ts), Google Gemini
+ * (GEMINI_API_KEY, see aiGemini.ts) or Claude
  * through the Anthropic SDK (ANTHROPIC_API_KEY: a manual tool loop on the
  * beta Messages endpoint so server-side refusal fallbacks can be enabled).
  * Both use the same tools. Scale includes 100 questions a month, Pro is unlimited.
@@ -23,17 +24,22 @@ import { createPurchaseOrder, listPurchaseOrders } from "./purchaseOrders";
 import { transferSuggestions } from "./transfers";
 import { hasFeature } from "../plans";
 import { geminiAnswer, geminiConfigured, geminiModel } from "./aiGemini";
+import { openaiAnswer, openaiConfigured, openaiModel } from "./aiOpenAI";
 
 const MODEL = () => config.anthropic.model || "claude-opus-5-5";
 const MAX_TOOL_ROUNDS = 8;
 
-export type AiProvider = "gemini" | "anthropic";
-/** Which AI answers: AI_PROVIDER when its key is set, else whichever key is set (Gemini first). */
+export type AiProvider = "openai" | "gemini" | "anthropic";
+/** Which AI answers: AI_PROVIDER when its key is set, else whichever key is set (OpenAI, Gemini, Claude). */
 export function aiProvider(): AiProvider | null {
-  const gem = geminiConfigured();
-  const ant = !!config.anthropic.apiKey && !aiKeyProblem();
+  const problem = aiKeyProblem();
+  const oai = openaiConfigured() && !problem?.startsWith("OPENAI");
+  const gem = geminiConfigured() && !problem?.startsWith("GEMINI");
+  const ant = !!config.anthropic.apiKey && !problem?.startsWith("ANTHROPIC");
+  if (config.aiProvider === "openai" && oai) return "openai";
   if (config.aiProvider === "gemini" && gem) return "gemini";
   if (config.aiProvider === "anthropic" && ant) return "anthropic";
+  if (oai) return "openai";
   if (gem) return "gemini";
   if (ant) return "anthropic";
   return null;
@@ -44,20 +50,25 @@ export const aiConfigured = () => aiProvider() !== null;
 export function aiKeyProblem(): string | null {
   const a = config.anthropic.apiKey.trim();
   const g = config.gemini.apiKey.trim();
-  const kind = (k: string) => (k.startsWith("sk-proj-") || (k.startsWith("sk-") && !k.startsWith("sk-ant-")) ? "an OpenAI key" : k.startsWith("AIza") ? "a Google Gemini key" : null);
-  if (a && !a.startsWith("sk-ant-")) {
-    const k = kind(a);
-    return `ANTHROPIC_API_KEY in .env holds ${k ?? "something that is not a Claude key"}. ${k === "a Google Gemini key" ? "Move it to GEMINI_API_KEY." : "Ask StockSense works with a Google Gemini key (GEMINI_API_KEY, from aistudio.google.com/apikey) or a Claude key (ANTHROPIC_API_KEY, starts with sk-ant-)."}`;
-  }
-  if (g && kind(g) === "an OpenAI key") return "GEMINI_API_KEY in .env holds an OpenAI key. Create a Gemini key at aistudio.google.com/apikey and paste that instead.";
-  return null;
+  const o = config.openai.apiKey.trim();
+  const kind = (k: string) =>
+    k.startsWith("sk-ant-") ? "a Claude key" : k.startsWith("sk-") ? "an OpenAI key" : k.startsWith("AIza") ? "a Google Gemini key" : null;
+  const where: Record<string, string> = { "an OpenAI key": "OPENAI_API_KEY", "a Google Gemini key": "GEMINI_API_KEY", "a Claude key": "ANTHROPIC_API_KEY" };
+  const wrong = (line: string, k: string | null, ok: string) =>
+    k && k !== ok ? `${line} in .env holds ${k}. Move it to ${where[k]} and restart the server.` : null;
+  return wrong("OPENAI_API_KEY", o ? kind(o) : null, "an OpenAI key")
+    ?? wrong("GEMINI_API_KEY", g ? kind(g) : null, "a Google Gemini key")
+    ?? (a && !a.startsWith("sk-ant-") ? (kind(a) ? wrong("ANTHROPIC_API_KEY", kind(a), "a Claude key") : "ANTHROPIC_API_KEY in .env is not a Claude key (those start with sk-ant-).") : null);
 }
-export const aiModel = () => (aiProvider() === "gemini" ? geminiModel() : aiProvider() === "anthropic" ? MODEL() : null);
+export const aiModel = () => {
+  const p = aiProvider();
+  return p === "openai" ? openaiModel() : p === "gemini" ? geminiModel() : p === "anthropic" ? MODEL() : null;
+};
 
 let client: Anthropic | null = null;
 function anthropic() {
   if (!config.anthropic.apiKey) {
-    throw new ApiError(503, "api_error", "ai_not_configured", "Ask StockSense needs GEMINI_API_KEY or ANTHROPIC_API_KEY on the server.");
+    throw new ApiError(503, "api_error", "ai_not_configured", "Ask StockSense needs OPENAI_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY on the server.");
   }
   client ??= new Anthropic({ apiKey: config.anthropic.apiKey });
   return client;
@@ -406,8 +417,9 @@ export async function ask(ctx: AskContext, conversationId: number, question: str
   }
   const conv = await getConv(ctx.storeId, conversationId);
   const provider = aiProvider();
-  if (!provider) throw new ApiError(503, "api_error", "ai_not_configured", "Ask StockSense needs GEMINI_API_KEY or ANTHROPIC_API_KEY on the server.");
-  if (provider === "gemini") return askWithGemini(ctx, conversationId, conv, q);
+  if (!provider) throw new ApiError(503, "api_error", "ai_not_configured", "Ask StockSense needs OPENAI_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY on the server.");
+  if (provider === "gemini") return askWithTextHistory(ctx, conversationId, conv, q, geminiAnswer);
+  if (provider === "openai") return askWithTextHistory(ctx, conversationId, conv, q, openaiAnswer);
   const sdk = anthropic();
 
   const history = await query("SELECT role, content FROM ask_messages WHERE conversation_id=$1 ORDER BY id", [conversationId]);
@@ -487,15 +499,15 @@ export async function ask(ctx: AskContext, conversationId: number, question: str
   return { conversation_id: conversationId, answer, charts, stop_reason: stop };
 }
 
-/** The Gemini path: same tools, same storage; only text turns are kept as history. */
-async function askWithGemini(ctx: AskContext, conversationId: number, conv: any, q: string) {
+/** The Gemini and OpenAI paths: same tools, same storage; only text turns are kept as history. */
+async function askWithTextHistory(ctx: AskContext, conversationId: number, conv: any, q: string, answerWith: typeof geminiAnswer) {
   const prior = (
     await query("SELECT role, text FROM ask_messages WHERE conversation_id=$1 AND text IS NOT NULL ORDER BY id", [conversationId])
   ).map((m: any) => ({ role: m.role === "assistant" ? "assistant" : "user", text: String(m.text) })) as { role: "user" | "assistant"; text: string }[];
   await query("INSERT INTO ask_messages (conversation_id, role, content, text) VALUES ($1,'user',$2,$3)", [conversationId, JSON.stringify(q), q]);
 
   const charts: Chart[] = [];
-  const { answer: raw, stop } = await geminiAnswer({
+  const { answer: raw, stop } = await answerWith({
     system: await systemPrompt(ctx.storeId, ctx.channel),
     prior,
     question: q,

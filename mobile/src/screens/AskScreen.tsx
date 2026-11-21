@@ -14,6 +14,7 @@ import type { RootStackParamList } from "../navigation";
 import { haptic } from "../utils/haptics";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Ask">;
+const PROVIDER = { openai: "OpenAI", gemini: "Google Gemini", anthropic: "Claude" } as const;
 type Msg = { id: number; role: "user" | "assistant" | "error"; text: string; charts?: AskChart[] };
 
 const SUGGESTIONS = [
@@ -108,7 +109,7 @@ export function AskScreen({ route }: Props) {
               {u ? (
                 <Text style={[type.caption, { color: t.textMuted, marginTop: 6 }]}>
                   {u.monthly_limit == null ? "Unlimited questions on your plan" : `${u.remaining ?? 0} of ${u.monthly_limit} questions left this month`}
-                  {u.configured && u.provider ? ` · ${u.provider === "gemini" ? "Google Gemini" : "Claude"}${u.model ? ` (${u.model})` : ""}` : ""}
+                  {u.configured && u.provider ? ` · ${PROVIDER[u.provider]}${u.model ? ` (${u.model})` : ""}` : ""}
                 </Text>
               ) : null}
             </View>
@@ -192,8 +193,8 @@ export function AskScreen({ route }: Props) {
 export function KeySetup({ problem }: { problem?: string | null }) {
   const t = useTheme();
   const steps: { title: string; body: string; code?: string }[] = [
-    { title: "Get a Gemini key", body: "Sign in at aistudio.google.com/apikey with your Google account and create an API key. It usually starts with AIza." },
-    { title: "Add it to the server", body: "On the laptop, open the .env file in the StockSense project folder and paste the key after this line's =:", code: "GEMINI_API_KEY=AIza..." },
+    { title: "Get a key", body: "Any one works: OpenAI (platform.openai.com/api-keys, starts with sk-), Google Gemini (aistudio.google.com/apikey, starts with AIza) or Claude (console.anthropic.com, starts with sk-ant-)." },
+    { title: "Add it to the server", body: "On the laptop, open the .env file in the StockSense project folder and paste the key after the matching line's =:", code: "OPENAI_API_KEY=sk-...\nGEMINI_API_KEY=AIza...\nANTHROPIC_API_KEY=sk-ant-..." },
     { title: "Restart the server", body: "In a terminal in the project folder, run:", code: "docker compose up -d --force-recreate server" },
     { title: "Done", body: "Come back here and ask a question. The same key also turns on AI answers on WhatsApp." },
   ];
@@ -223,7 +224,7 @@ export function KeySetup({ problem }: { problem?: string | null }) {
           </View>
         </View>
       ))}
-      <Text style={[type.caption, { color: t.textMuted, marginTop: space.md }]}>The key stays on your server; the app never sees it. A Claude key (ANTHROPIC_API_KEY, starts with sk-ant-) works too. Everything else in StockSense works without one.</Text>
+      <Text style={[type.caption, { color: t.textMuted, marginTop: space.md }]}>The key stays on your server; the app never sees it. Everything else in StockSense works without one.</Text>
     </Card>
   );
 }

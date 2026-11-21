@@ -35,7 +35,7 @@ export async function whatsappStatus(storeId: number) {
     provider: "WhatsApp Cloud API",
     business_number: config.whatsapp.businessNumber || null,
     ai_answers: aiConfigured(),
-    note: aiConfigured() ? null : "AI answers need GEMINI_API_KEY (or ANTHROPIC_API_KEY) on the server. Until then, menus work and typed text searches products.",
+    note: aiConfigured() ? null : "AI answers need an AI key on the server (OPENAI_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY). Until then, menus work and typed text searches products.",
     link_code: code ? { code: code.code, message: `link ${code.code}`, expires_at: code.expires_at } : null,
     connected_numbers: numbers,
   };

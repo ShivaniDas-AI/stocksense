@@ -56,8 +56,12 @@ export const config = {
   },
 
   // Ask StockSense (and AI answers on WhatsApp): Gemini or Claude.
-  // AI_PROVIDER=gemini|anthropic picks one when both keys are set.
+  // AI_PROVIDER=openai|gemini|anthropic picks one when several keys are set.
   aiProvider: (process.env.AI_PROVIDER || "").toLowerCase(),
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || "",
+    model: process.env.OPENAI_MODEL || "",
+  },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "",
     model: process.env.GEMINI_MODEL || "",

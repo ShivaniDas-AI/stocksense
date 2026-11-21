@@ -310,10 +310,11 @@ curl -X POST -H "Authorization: Bearer ss_live_..." -H "Content-Type: applicatio
   -d '{"supplier_id": 3, "lines": [{"variant_id": 41, "quantity": 120}]}' "$APP_URL/api/v1/purchase-orders"
 ```
 
-**Server settings for the optional parts** (`.env`): `GEMINI_API_KEY`
-(Google Gemini, key from aistudio.google.com/apikey; `GEMINI_MODEL` picks the model)
-or `ANTHROPIC_API_KEY` (Claude; `ASK_MODEL` overrides the model) for Ask StockSense and
-AI answers on WhatsApp (`AI_PROVIDER=gemini|anthropic` when both are set),
+**Server settings for the optional parts** (`.env`): one AI key for Ask StockSense
+and AI answers on WhatsApp: `OPENAI_API_KEY` (OpenAI; `OPENAI_MODEL` picks the model),
+`GEMINI_API_KEY` (Google Gemini, key from aistudio.google.com/apikey; `GEMINI_MODEL`)
+or `ANTHROPIC_API_KEY` (Claude; `ASK_MODEL`), with `AI_PROVIDER=openai|gemini|anthropic`
+when several are set,
 `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_NUMBER`,
 `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_ALERT_TEMPLATE`
 (the Meta webhook URL is `{APP_URL}/webhooks/whatsapp`), `TWILIO_ACCOUNT_SID`,

@@ -104,7 +104,7 @@ export function SettingsScreen() {
 
         <SectionTitle>Assistants</SectionTitle>
         <Card style={{ paddingVertical: 4 }}>
-          <Row icon="sparkles-outline" toneName="primary" title="Ask StockSense" subtitle={askUsage.data && !askUsage.data.configured ? "Not switched on: tap to see how to add the AI key" : "Questions in your own words, answered from live forecasts"} onPress={() => nav.navigate("Ask")} right={askUsage.data ? <Pill toneName={askUsage.data.configured ? "success" : "warning"}>{askUsage.data.configured ? (askUsage.data.provider === "gemini" ? "On · Gemini" : "On · Claude") : askUsage.data.key_problem ? "Wrong key" : "Needs key"}</Pill> : undefined} />
+          <Row icon="sparkles-outline" toneName="primary" title="Ask StockSense" subtitle={askUsage.data && !askUsage.data.configured ? "Not switched on: tap to see how to add the AI key" : "Questions in your own words, answered from live forecasts"} onPress={() => nav.navigate("Ask")} right={askUsage.data ? <Pill toneName={askUsage.data.configured ? "success" : "warning"}>{askUsage.data.configured ? `On · ${askUsage.data.provider === "openai" ? "OpenAI" : askUsage.data.provider === "gemini" ? "Gemini" : "Claude"}` : askUsage.data.key_problem ? "Wrong key" : "Needs key"}</Pill> : undefined} />
           <Row icon="logo-whatsapp" toneName="success" title="WhatsApp chat" subtitle="Try the WhatsApp assistant right here" onPress={() => nav.navigate("WhatsAppChat")} last />
         </Card>
 

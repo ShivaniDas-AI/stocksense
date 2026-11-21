@@ -404,7 +404,7 @@ export interface AskChart {
   markers?: unknown[];
 }
 export interface AskAnswer { conversation_id: number; answer: string; charts?: AskChart[] }
-export interface AskUsage { plan: string; questions_this_month: number; monthly_limit: number | null; remaining: number | null; resets_on: string; configured: boolean; provider?: "gemini" | "anthropic" | null; model?: string | null; key_problem?: string | null }
+export interface AskUsage { plan: string; questions_this_month: number; monthly_limit: number | null; remaining: number | null; resets_on: string; configured: boolean; provider?: "openai" | "gemini" | "anthropic" | null; model?: string | null; key_problem?: string | null }
 export interface AskConversation { id: number; title: string; messages: number; updated_at: string }
 
 /* ---------- key number details (/api/v1/kpis/{metric}) ---------- */
