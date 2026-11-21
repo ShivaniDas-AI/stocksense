@@ -108,10 +108,11 @@ export function AskScreen({ route }: Props) {
               {u ? (
                 <Text style={[type.caption, { color: t.textMuted, marginTop: 6 }]}>
                   {u.monthly_limit == null ? "Unlimited questions on your plan" : `${u.remaining ?? 0} of ${u.monthly_limit} questions left this month`}
+                  {u.configured && u.provider ? ` · ${u.provider === "gemini" ? "Google Gemini" : "Claude"}${u.model ? ` (${u.model})` : ""}` : ""}
                 </Text>
               ) : null}
             </View>
-            {notConfigured ? <KeySetup /> : null}
+            {notConfigured ? <KeySetup problem={u?.key_problem} /> : null}
             {limitReached ? <Notice icon="lock-closed-outline" toneName="warning" title="Monthly limit reached">{`Questions reset on ${u?.resets_on}. Pro includes unlimited questions.`}</Notice> : null}
             <Text style={[type.label, { color: t.textMuted, marginTop: space.md, marginBottom: space.sm }]}>Try asking</Text>
             {SUGGESTIONS.map((s) => (
@@ -188,11 +189,11 @@ export function AskScreen({ route }: Props) {
  * How to switch Ask StockSense on. The key lives only on the server, never in
  * the app, so it is set in the server's .env file.
  */
-export function KeySetup() {
+export function KeySetup({ problem }: { problem?: string | null }) {
   const t = useTheme();
   const steps: { title: string; body: string; code?: string }[] = [
-    { title: "Get a key", body: "Sign in at console.anthropic.com, open API keys and create one. It starts with sk-ant-. Set a monthly spend limit there too." },
-    { title: "Add it to the server", body: "On the laptop, open the .env file in the StockSense project folder and fill in this line:", code: "ANTHROPIC_API_KEY=sk-ant-..." },
+    { title: "Get a Gemini key", body: "Sign in at aistudio.google.com/apikey with your Google account and create an API key. It usually starts with AIza." },
+    { title: "Add it to the server", body: "On the laptop, open the .env file in the StockSense project folder and paste the key after this line's =:", code: "GEMINI_API_KEY=AIza..." },
     { title: "Restart the server", body: "In a terminal in the project folder, run:", code: "docker compose up -d --force-recreate server" },
     { title: "Done", body: "Come back here and ask a question. The same key also turns on AI answers on WhatsApp." },
   ];
@@ -202,6 +203,12 @@ export function KeySetup() {
         <Ionicons name="key-outline" size={18} color={t.warning} style={{ marginRight: 8 }} />
         <Text style={[type.bodyStrong, { color: t.text, flex: 1 }]}>Switch on Ask StockSense</Text>
       </View>
+      {problem ? (
+        <View style={{ flexDirection: "row", backgroundColor: t.dangerSoft, borderRadius: radius.sm, padding: 10, marginBottom: space.md }}>
+          <Ionicons name="alert-circle" size={16} color={t.danger} style={{ marginRight: 8, marginTop: 1 }} />
+          <Text style={[type.caption, { color: t.text, flex: 1 }]}>{problem}</Text>
+        </View>
+      ) : null}
       {steps.map((s, i) => (
         <View key={s.title} style={{ flexDirection: "row", marginBottom: i < steps.length - 1 ? space.md : 0 }}>
           <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: t.primarySoft, alignItems: "center", justifyContent: "center", marginRight: 10, marginTop: 1 }}>
@@ -216,7 +223,7 @@ export function KeySetup() {
           </View>
         </View>
       ))}
-      <Text style={[type.caption, { color: t.textMuted, marginTop: space.md }]}>The key stays on your server; the app never sees it. Everything else in StockSense works without it.</Text>
+      <Text style={[type.caption, { color: t.textMuted, marginTop: space.md }]}>The key stays on your server; the app never sees it. A Claude key (ANTHROPIC_API_KEY, starts with sk-ant-) works too. Everything else in StockSense works without one.</Text>
     </Card>
   );
 }

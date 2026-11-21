@@ -55,7 +55,13 @@ export const config = {
     graphVersion: process.env.WHATSAPP_GRAPH_VERSION || "v21.0",
   },
 
-  // Ask StockSense (and AI answers on WhatsApp).
+  // Ask StockSense (and AI answers on WhatsApp): Gemini or Claude.
+  // AI_PROVIDER=gemini|anthropic picks one when both keys are set.
+  aiProvider: (process.env.AI_PROVIDER || "").toLowerCase(),
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "",
+    model: process.env.GEMINI_MODEL || "",
+  },
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY || "",
     model: process.env.ASK_MODEL || "",

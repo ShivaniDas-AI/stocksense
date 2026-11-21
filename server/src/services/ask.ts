@@ -4,9 +4,10 @@
  * draft purchase orders. On WhatsApp every change becomes an approval
  * request instead of happening directly.
  *
- * Uses Claude through the Anthropic SDK: a manual tool loop on the beta
- * Messages endpoint so server-side refusal fallbacks can be enabled.
- * Needs ANTHROPIC_API_KEY; Scale includes 100 questions a month, Pro is unlimited.
+ * The AI is Google Gemini (GEMINI_API_KEY, see aiGemini.ts) or Claude
+ * through the Anthropic SDK (ANTHROPIC_API_KEY: a manual tool loop on the
+ * beta Messages endpoint so server-side refusal fallbacks can be enabled).
+ * Both use the same tools. Scale includes 100 questions a month, Pro is unlimited.
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { config } from "../config";
@@ -21,16 +22,42 @@ import { listInventoryAlerts } from "./alertsEngine";
 import { createPurchaseOrder, listPurchaseOrders } from "./purchaseOrders";
 import { transferSuggestions } from "./transfers";
 import { hasFeature } from "../plans";
+import { geminiAnswer, geminiConfigured, geminiModel } from "./aiGemini";
 
 const MODEL = () => config.anthropic.model || "claude-opus-5-5";
 const MAX_TOOL_ROUNDS = 8;
 
-export const aiConfigured = () => !!config.anthropic.apiKey;
+export type AiProvider = "gemini" | "anthropic";
+/** Which AI answers: AI_PROVIDER when its key is set, else whichever key is set (Gemini first). */
+export function aiProvider(): AiProvider | null {
+  const gem = geminiConfigured();
+  const ant = !!config.anthropic.apiKey && !aiKeyProblem();
+  if (config.aiProvider === "gemini" && gem) return "gemini";
+  if (config.aiProvider === "anthropic" && ant) return "anthropic";
+  if (gem) return "gemini";
+  if (ant) return "anthropic";
+  return null;
+}
+export const aiConfigured = () => aiProvider() !== null;
+
+/** A key pasted into the wrong line, explained so the app can show it. */
+export function aiKeyProblem(): string | null {
+  const a = config.anthropic.apiKey.trim();
+  const g = config.gemini.apiKey.trim();
+  const kind = (k: string) => (k.startsWith("sk-proj-") || (k.startsWith("sk-") && !k.startsWith("sk-ant-")) ? "an OpenAI key" : k.startsWith("AIza") ? "a Google Gemini key" : null);
+  if (a && !a.startsWith("sk-ant-")) {
+    const k = kind(a);
+    return `ANTHROPIC_API_KEY in .env holds ${k ?? "something that is not a Claude key"}. ${k === "a Google Gemini key" ? "Move it to GEMINI_API_KEY." : "Ask StockSense works with a Google Gemini key (GEMINI_API_KEY, from aistudio.google.com/apikey) or a Claude key (ANTHROPIC_API_KEY, starts with sk-ant-)."}`;
+  }
+  if (g && kind(g) === "an OpenAI key") return "GEMINI_API_KEY in .env holds an OpenAI key. Create a Gemini key at aistudio.google.com/apikey and paste that instead.";
+  return null;
+}
+export const aiModel = () => (aiProvider() === "gemini" ? geminiModel() : aiProvider() === "anthropic" ? MODEL() : null);
 
 let client: Anthropic | null = null;
 function anthropic() {
   if (!config.anthropic.apiKey) {
-    throw new ApiError(503, "api_error", "ai_not_configured", "Ask StockSense needs ANTHROPIC_API_KEY on the server.");
+    throw new ApiError(503, "api_error", "ai_not_configured", "Ask StockSense needs GEMINI_API_KEY or ANTHROPIC_API_KEY on the server.");
   }
   client ??= new Anthropic({ apiKey: config.anthropic.apiKey });
   return client;
@@ -360,6 +387,9 @@ export async function askUsage(storeId: number) {
     remaining: plan.ask_monthly_limit === null ? null : Math.max(plan.ask_monthly_limit - (used?.n ?? 0), 0),
     resets_on: addDays(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().slice(0, 10), 0),
     configured: aiConfigured(),
+    provider: aiProvider(),
+    key_problem: aiKeyProblem(),
+    model: aiModel(),
   };
 }
 
@@ -375,6 +405,9 @@ export async function ask(ctx: AskContext, conversationId: number, question: str
     throw new ApiError(402, "plan_error", "ask_limit_reached", `This month's ${usage.monthly_limit} questions are used. Pro includes unlimited questions.`);
   }
   const conv = await getConv(ctx.storeId, conversationId);
+  const provider = aiProvider();
+  if (!provider) throw new ApiError(503, "api_error", "ai_not_configured", "Ask StockSense needs GEMINI_API_KEY or ANTHROPIC_API_KEY on the server.");
+  if (provider === "gemini") return askWithGemini(ctx, conversationId, conv, q);
   const sdk = anthropic();
 
   const history = await query("SELECT role, content FROM ask_messages WHERE conversation_id=$1 ORDER BY id", [conversationId]);
@@ -447,6 +480,34 @@ export async function ask(ctx: AskContext, conversationId: number, question: str
     `UPDATE ask_messages SET text=$2, charts=$3 WHERE id = (SELECT MAX(id) FROM ask_messages WHERE conversation_id=$1 AND role='assistant')`,
     [conversationId, answer, JSON.stringify(charts)]
   );
+  if (conv.title === "New conversation") {
+    await query("UPDATE ask_conversations SET title=$2 WHERE id=$1", [conversationId, q.length > 60 ? q.slice(0, 57) + "…" : q]);
+  }
+  await query("UPDATE ask_conversations SET updated_at=now() WHERE id=$1", [conversationId]);
+  return { conversation_id: conversationId, answer, charts, stop_reason: stop };
+}
+
+/** The Gemini path: same tools, same storage; only text turns are kept as history. */
+async function askWithGemini(ctx: AskContext, conversationId: number, conv: any, q: string) {
+  const prior = (
+    await query("SELECT role, text FROM ask_messages WHERE conversation_id=$1 AND text IS NOT NULL ORDER BY id", [conversationId])
+  ).map((m: any) => ({ role: m.role === "assistant" ? "assistant" : "user", text: String(m.text) })) as { role: "user" | "assistant"; text: string }[];
+  await query("INSERT INTO ask_messages (conversation_id, role, content, text) VALUES ($1,'user',$2,$3)", [conversationId, JSON.stringify(q), q]);
+
+  const charts: Chart[] = [];
+  const { answer: raw, stop } = await geminiAnswer({
+    system: await systemPrompt(ctx.storeId, ctx.channel),
+    prior,
+    question: q,
+    tools: TOOLS as any,
+    maxRounds: MAX_TOOL_ROUNDS,
+    runTool: (name, args) => runTool(ctx, name, args, charts),
+  });
+  const answer = raw || "I couldn't put an answer together. Try rephrasing the question.";
+  // Stored as a plain string so the conversation also reads correctly with Claude later.
+  await query("INSERT INTO ask_messages (conversation_id, role, content, text, charts) VALUES ($1,'assistant',$2,$3,$4)", [
+    conversationId, JSON.stringify(answer), answer, JSON.stringify(charts),
+  ]);
   if (conv.title === "New conversation") {
     await query("UPDATE ask_conversations SET title=$2 WHERE id=$1", [conversationId, q.length > 60 ? q.slice(0, 57) + "…" : q]);
   }
