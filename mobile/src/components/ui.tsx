@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { fw, radius, riskMeta, RiskLevel, shadow, space, tone, ToneName, type, useTheme } from "../theme";
+import { Alert, Platform } from "react-native";
+import { fw, radius, riskMeta, RiskLevel, shadow, space, statusOf, tone, ToneName, type, useTheme } from "../theme";
 import { haptic } from "../utils/haptics";
 
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -109,7 +110,7 @@ export function KpiTile({
   const body = (
     <Card style={[{ flex: 1, minWidth: "46%", padding: space.md }, style]}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text style={[type.label, { color: t.textMuted, flex: 1 }]} numberOfLines={1}>{label}</Text>
+        <Text style={[type.label, { color: t.textMuted, flex: 1, marginRight: 6 }]} numberOfLines={2}>{label}</Text>
         <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: c.bg, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name={icon} size={15} color={c.fg} />
         </View>
@@ -122,7 +123,7 @@ export function KpiTile({
             <Text style={[fw(700), { color: up ? t.success : t.danger, fontSize: 12 }]}>{Math.abs(delta.value)}%</Text>
           </View>
         ) : null}
-        {sub ? <Text style={[type.caption, { color: t.textSecondary, flex: 1 }]} numberOfLines={1}>{sub}</Text> : null}
+        {sub ? <Text style={[type.caption, { color: t.textSecondary, flex: 1 }]} numberOfLines={2}>{sub}</Text> : null}
       </View>
     </Card>
   );
@@ -288,7 +289,8 @@ export function Stepper({ label, value, onChange, min = 0, unit }: { label: stri
           value={String(value)}
           onChangeText={(s) => onChange(Math.max(min, parseInt(s, 10) || 0))}
           keyboardType="number-pad"
-          style={[fw(700), { flex: 1, textAlign: "center", color: t.text, fontSize: 17, paddingVertical: 10 }]}
+          // width 0 + flex 1: on the web an <input> otherwise keeps its default width and pushes the + button out.
+          style={[fw(700), { flex: 1, width: 0, minWidth: 0, textAlign: "center", color: t.text, fontSize: 17, paddingVertical: 10 }]}
         />
         {btn("add", () => onChange(value + 1))}
       </View>
@@ -406,4 +408,76 @@ export function OptionSheet<T extends string>({
       </Pressable>
     </Modal>
   );
+}
+
+/* ---------- v1 status badge, segmented control, stat ---------- */
+
+/** Badge for a /api/v1 forecast status (reorder_now, watch, healthy ...). */
+export function StatusBadge({ status, size = "sm" }: { status: string; size?: "sm" | "md" }) {
+  const t = useTheme();
+  const m = statusOf(status);
+  const c = tone(t, m.tone);
+  return (
+    <View style={{ backgroundColor: c.bg, borderRadius: radius.pill, paddingHorizontal: size === "md" ? 12 : 9, paddingVertical: size === "md" ? 5 : 3, alignSelf: "flex-start", flexDirection: "row", alignItems: "center" }}>
+      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.fg, marginRight: 6 }} />
+      <Text style={[fw(700), { color: c.fg, fontSize: size === "md" ? 13 : 11 }]}>{m.label}</Text>
+    </View>
+  );
+}
+
+/** Two to four equal options in one rounded track. */
+export function Segmented<T extends string>({ options, value, onChange }: { options: { key: T; label: string; count?: number }[]; value: T; onChange: (k: T) => void }) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: "row", backgroundColor: t.surfaceAlt, borderRadius: radius.md, padding: 3, borderWidth: 1, borderColor: t.border }}>
+      {options.map((o) => {
+        const on = o.key === value;
+        return (
+          <Pressable
+            key={o.key}
+            onPress={() => { haptic.tap(); onChange(o.key); }}
+            style={[{ flex: 1, paddingVertical: 8, borderRadius: radius.sm + 1, alignItems: "center", flexDirection: "row", justifyContent: "center" }, on && { backgroundColor: t.surface }, on && !t.dark && shadow]}
+          >
+            <Text style={[on ? fw(700) : fw(500), { color: on ? t.text : t.textSecondary, fontSize: 13 }]} numberOfLines={1}>{o.label}</Text>
+            {o.count !== undefined ? <Text style={[fw(600), { color: on ? t.primary : t.textMuted, fontSize: 12, marginLeft: 5 }]}>{o.count}</Text> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Label over a value, for compact metric rows inside cards. */
+export function Stat({ label, value, sub, warn, flex = 1 }: { label: string; value: string; sub?: string; warn?: boolean; flex?: number }) {
+  const t = useTheme();
+  return (
+    <View style={{ flex }}>
+      <Text style={[fw(600), { color: t.textMuted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 }]} numberOfLines={2}>{label}</Text>
+      <Text style={[fw(700), { color: warn ? t.danger : t.text, fontSize: 15, marginTop: 3 }]} numberOfLines={1}>{value}</Text>
+      {sub ? <Text style={[type.caption, { color: t.textMuted, fontSize: 11 }]} numberOfLines={1}>{sub}</Text> : null}
+    </View>
+  );
+}
+
+/** Confirm dialog that also works in a browser (Alert.alert has no buttons on web). */
+export function confirm(title: string, message: string, ok: string, onOk: () => void, destructive = false) {
+  if (Platform.OS === "web") {
+    // eslint-disable-next-line no-alert
+    if (typeof window !== "undefined" && window.confirm(`${title}\n\n${message}`)) onOk();
+    return;
+  }
+  Alert.alert(title, message, [
+    { text: "Cancel", style: "cancel" },
+    { text: ok, style: destructive ? "destructive" : "default", onPress: onOk },
+  ]);
+}
+
+/** One-line message after an action; Alert on phones, window.alert in a browser. */
+export function notify(title: string, message?: string) {
+  if (Platform.OS === "web") {
+    // eslint-disable-next-line no-alert
+    if (typeof window !== "undefined") window.alert(message ? `${title}\n\n${message}` : title);
+    return;
+  }
+  Alert.alert(title, message);
 }

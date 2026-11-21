@@ -144,9 +144,13 @@ To stop everything: `docker compose stop` in the project folder, close the
 Expo terminal (Ctrl+C), and stop the tunnel with
 `Stop-Process -Name ngrok` in PowerShell.
 
-The app screens cover the dashboard, products, alerts and settings. Purchase
-orders, suppliers, transfers, Ask StockSense and WhatsApp work through the API
-(`/docs`) but have no app screens yet.
+The app has five tabs: **Home** (status counts, key numbers, weekly sales and
+forecast chart, running low, products), **Orders** (purchase orders and
+suppliers), **Alerts** (the five alert types, dismiss and reopen), **WhatsApp**
+(link a phone, roles, activity, and a chat preview that runs the real assistant)
+and **Settings** (stores, plan, Ask StockSense, API keys, server address). A
+product opens its stock projection, demand chart, ordering rules and a Reorder
+screen that creates draft purchase orders. Transfers are API-only for now.
 
 ## Quick start (Docker)
 

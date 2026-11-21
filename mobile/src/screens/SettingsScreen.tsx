@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,7 +7,8 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Avatar, Button, Card, Input, Row, ScreenHeader, SectionTitle } from "../components/ui";
+import { Avatar, Button, Card, Input, Pill, Row, ScreenHeader, SectionTitle, confirm, notify } from "../components/ui";
+import { dateLabel } from "../utils/format";
 import { fw, space, type, useTheme } from "../theme";
 import { haptic } from "../utils/haptics";
 import type { RootStackParamList } from "../navigation";
@@ -25,11 +26,12 @@ export function SettingsScreen() {
   const [testing, setTesting] = useState(false);
 
   const stores = useQuery({ queryKey: ["stores"], queryFn: api.stores });
+  const plan = useQuery({ queryKey: ["plan"], queryFn: api.plan, retry: 0 });
   const switchStore = useMutation({
     mutationFn: (id: string) => api.switchStore(id),
     // Reset (not clear) so active screens refetch straight away for the new store.
     onSuccess: async (r) => { await signIn(r.token); await qc.resetQueries(); },
-    onError: (e: any) => Alert.alert("Could not switch store", e?.message || "Please try again."),
+    onError: (e: any) => notify("Could not switch store", e?.message || "Please try again."),
   });
 
   async function saveUrl() {
@@ -76,6 +78,35 @@ export function SettingsScreen() {
           <Row icon="add-circle-outline" toneName="primary" title="Add another store" subtitle="Connect a second Shopify, BigCommerce or WooCommerce store" onPress={() => nav.navigate("Connect")} last />
         </Card>
 
+        {plan.data ? (
+          <>
+            <SectionTitle>Plan</SectionTitle>
+            <Card>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[type.heading, fw(700), { color: t.text }]}>{plan.data.name}</Text>
+                  <Text style={[type.caption, { color: t.textSecondary }]}>
+                    {`$${plan.data.price} a month`}
+                    {plan.data.trial_ends_at ? ` · trial ends ${dateLabel(plan.data.trial_ends_at)}` : ""}
+                  </Text>
+                </View>
+                <Pill toneName="primary" icon="refresh-outline">{`${plan.data.limits.forecast_rebuild} forecasts`}</Pill>
+              </View>
+              <View style={{ flexDirection: "row", marginTop: space.md, paddingTop: space.md, borderTopWidth: 1, borderTopColor: t.border }}>
+                <Usage label="Products" used={plan.data.usage.skus} limit={plan.data.limits.skus} />
+                <Usage label="Locations" used={plan.data.usage.locations} limit={plan.data.limits.locations} />
+                <Usage label="Ask, this month" used={plan.data.usage.ask_questions_this_month} limit={plan.data.limits.ask_questions_per_month} />
+              </View>
+            </Card>
+          </>
+        ) : null}
+
+        <SectionTitle>Assistants</SectionTitle>
+        <Card style={{ paddingVertical: 4 }}>
+          <Row icon="sparkles-outline" toneName="primary" title="Ask StockSense" subtitle="Questions in your own words, answered from live forecasts" onPress={() => nav.navigate("Ask")} />
+          <Row icon="logo-whatsapp" toneName="success" title="WhatsApp chat" subtitle="Try the WhatsApp assistant right here" onPress={() => nav.navigate("WhatsAppChat")} last />
+        </Card>
+
         <SectionTitle>Developers</SectionTitle>
         <Card style={{ paddingVertical: 4 }}>
           <Row icon="key-outline" toneName="primary" title="API keys" subtitle="Connect other tools to this store's forecasts and KPIs" onPress={() => nav.navigate("ApiKeys")} last />
@@ -106,7 +137,7 @@ export function SettingsScreen() {
 
         <SectionTitle>About</SectionTitle>
         <Card style={{ paddingVertical: 4 }}>
-          <Row icon="sparkles-outline" toneName="primary" title="Forecasting" subtitle="Statistical models per SKU, refreshed nightly and after each sync" />
+          <Row icon="sparkles-outline" toneName="primary" title="Forecasting" subtitle="Statistical models per product, refreshed on your plan's schedule and after each sync" />
           <Row icon="shield-checkmark-outline" toneName="success" title="Your data" subtitle="Store tokens stay on the server; this phone only holds a session key" last />
         </Card>
 
@@ -116,15 +147,31 @@ export function SettingsScreen() {
             variant="danger"
             icon="log-out-outline"
             onPress={() =>
-              Alert.alert("Log out?", "The store stays connected on the server. You can reconnect with the same token.", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Log out", style: "destructive", onPress: async () => { await signOut(); qc.clear(); } },
-              ])
+              confirm("Log out?", "The store stays connected on the server. You can reconnect with the same token.", "Log out", async () => { await signOut(); qc.clear(); }, true)
             }
           />
         </View>
         <Text style={[type.caption, { color: t.textMuted, textAlign: "center", marginTop: space.xl }]}>StockSense · AI inventory forecasting</Text>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function Usage({ label, used, limit }: { label: string; used: number; limit: number | null }) {
+  const t = useTheme();
+  const pct = limit ? Math.min(100, (used / limit) * 100) : 0;
+  return (
+    <View style={{ flex: 1, marginRight: 10 }}>
+      <Text style={[fw(600), { color: t.textMuted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 }]} numberOfLines={1}>{label}</Text>
+      <Text style={[fw(700), { color: t.text, fontSize: 15, marginTop: 3 }]}>
+        {used.toLocaleString()}
+        <Text style={[fw(500), { color: t.textMuted, fontSize: 12 }]}>{limit == null ? " / unlimited" : limit === 0 ? " / not included" : ` / ${limit.toLocaleString()}`}</Text>
+      </Text>
+      {limit ? (
+        <View style={{ height: 4, borderRadius: 2, backgroundColor: t.surfaceAlt, marginTop: 6, overflow: "hidden" }}>
+          <View style={{ width: `${pct}%`, height: 4, backgroundColor: pct > 90 ? t.danger : t.primary }} />
+        </View>
+      ) : null}
+    </View>
   );
 }

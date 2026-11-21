@@ -82,7 +82,11 @@ export const bigcommerce: PlatformAdapter = {
           variants: (p.variants ?? []).map((v: any) => ({
             externalId: String(v.id),
             sku: v.sku || p.sku || null,
-            title: (v.option_values ?? []).map((o: any) => o.label).join(" / ") || p.name,
+            // "Jar - Black / Medium", like the Shopify and WooCommerce adapters, so a variant reads on its own.
+            title: (() => {
+              const opts = (v.option_values ?? []).map((o: any) => o.label).join(" / ");
+              return opts ? `${p.name} - ${opts}` : p.name;
+            })(),
             price: v.calculated_price ?? v.price ?? p.price ?? null,
             inventoryItemId: null,
             // "none" = not tracked; "product" = stock held on the product, variants report 0;

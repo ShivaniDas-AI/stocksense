@@ -139,3 +139,270 @@ export interface ConnectResponse {
   store_id?: number;
   error?: string;
 }
+
+/* ---------- /api/v1 shapes used by the charts ---------- */
+
+export interface WeekPoint { week_start: string; units: number; forecast: boolean }
+
+export interface DashboardV1 {
+  ready: boolean;
+  run_date: string | null;
+  cards?: {
+    skus_tracked: { value: number; critical: number };
+    need_reordering: { value: number; draft_purchase_orders: number };
+    cash_in_overstock: { value: number; units: number; overstock_days: number; basis: string };
+    forecast_accuracy: { value: number | null; change_this_month: number | null; unit: string };
+    revenue_protected: { value: number; alerts: number; period_days: number };
+  };
+  units_sold_vs_forecast?: WeekPoint[];
+  running_low?: { variant_id: number; title: string; sku: string | null; cover_days: number | null; runs_out_on: string | null; status: string }[];
+}
+
+export interface ForecastDetailV1 {
+  variant_id: number;
+  sku: string | null;
+  title: string;
+  product_title: string | null;
+  vendor: string | null;
+  category: string | null;
+  image_url: string | null;
+  price: number | null;
+  run_date: string | null;
+  model: string | null;
+  status: string;
+  confidence: string | null;
+  accuracy: number | null;
+  summary: string;
+  numbers: {
+    on_hand: number;
+    on_order: number;
+    in_draft: number;
+    rate_per_day: number | null;
+    forecast_per_day: number;
+    cover_days: number | null;
+    runs_out_on: string | null;
+    reorder_point: number | null;
+    safety_stock: number | null;
+    suggested_quantity: number;
+    revenue_at_risk: number | null;
+    lead_time_days: number;
+    order_today_lands_on: string | null;
+  };
+  ordering: {
+    supplier: { id: number; name: string } | null;
+    supplier_source?: string | null;
+    case_pack: number | null;
+    min_order_qty: number | null;
+    lead_time_override_days?: number | null;
+    lead_time_source?: string | null;
+    unit_cost?: number | null;
+    min_safety_stock?: number | null;
+  };
+  stock_curve: {
+    history: { date: string; stock: number; sold: number }[];
+    forecast: { date: string; stock: number; low: number; high: number }[];
+    markers: { today: string; order_today_lands: string | null; reorder_point: number | null };
+  } | null;
+  weekly_demand: WeekPoint[];
+}
+
+/* ---------- WhatsApp ---------- */
+
+export type WhatsAppRole = "can_approve" | "view_only";
+
+export interface WhatsAppNumber { id: number; phone: string; role: WhatsAppRole; connected_at: string; last_message_at: string | null }
+
+export interface WhatsAppStatus {
+  enabled: boolean;
+  provider: string;
+  business_number: string | null;
+  ai_answers: boolean;
+  note: string | null;
+  link_code: { code: string; message: string; expires_at: string } | null;
+  connected_numbers: WhatsAppNumber[];
+}
+
+export interface WhatsAppLinkCode { code: string; message: string; expires_at: string; send_to: string | null; open_whatsapp_url: string | null }
+
+export interface WhatsAppActivity {
+  id: number;
+  title: string;
+  source: "menu" | "ai";
+  summary: string;
+  phone: string;
+  status: "pending" | "approved" | "done" | "failed" | "cancelled" | "expired" | string;
+  result: string | Record<string, unknown> | null;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export type BotMessage =
+  | { type: "text"; text: string }
+  | { type: "buttons"; text: string; header?: string; footer?: string; buttons: { id: string; title: string }[] }
+  | { type: "list"; text: string; header?: string; footer?: string; button: string; sections: { title?: string; rows: { id: string; title: string; description?: string }[] }[] }
+  | { type: "image"; url: string; caption?: string };
+
+/* ---------- /api/v1: lists, summary, store ---------- */
+
+export interface Page<T> { data: T[]; page: number; limit: number; total: number; has_more: boolean }
+
+export interface StoreV1 {
+  id: number;
+  name: string | null;
+  platform: Platform;
+  domain: string;
+  currency: string;
+  sync_status: StoreInfo["sync_status"];
+  sync_error: string | null;
+  plan: "launch" | "scale" | "pro";
+  demo: boolean;
+}
+
+export interface SummaryV1 {
+  ready: boolean;
+  run_date: string | null;
+  counts?: Record<string, number>;
+  revenue_at_risk?: number;
+  kpis?: Kpis;
+}
+
+export interface ForecastRow {
+  variant_id: number;
+  sku: string | null;
+  title: string;
+  vendor: string | null;
+  category: string | null;
+  image_url: string | null;
+  supplier: { id: number; name: string } | null;
+  status: string;
+  on_hand: number;
+  on_order: number;
+  rate_per_day: number | null;
+  forecast_per_day: number | null;
+  cover_days: number | null;
+  runs_out_on: string | null;
+  reorder_point: number | null;
+  suggested_quantity: number | null;
+  revenue_at_risk: number | null;
+  lead_time_days: number | null;
+  safety_stock: number | null;
+  confidence: string | null;
+  model: string | null;
+  price: number | null;
+  unit_cost: number | null;
+}
+
+export interface ForecastList extends Page<ForecastRow> {
+  run_date: string | null;
+  counts?: Record<string, number>;
+}
+
+export interface PlanV1 {
+  plan: string;
+  name: string;
+  price: number;
+  trial_ends_at: string | null;
+  limits: { skus: number | null; locations: number | null; ask_questions_per_month: number | null; forecast_rebuild: string };
+  usage: { skus: number; locations: number; ask_questions_this_month: number };
+  features: string[];
+}
+
+/* ---------- alerts ---------- */
+
+export interface AlertV1 {
+  id: number;
+  type: "stockout_risk" | "reorder_point" | "velocity_shift" | "lead_time_drift" | "overstock" | string;
+  status: "open" | "dismissed" | "resolved";
+  urgent: boolean;
+  title: string;
+  message: string;
+  what_to_do: string | null;
+  revenue_at_risk: number | null;
+  product: { variant_id: number; title: string; sku: string | null } | null;
+  supplier: { id: number; name: string } | null;
+  opened_at: string;
+  updated_at: string;
+  dismissed_at: string | null;
+  resolved_at: string | null;
+  resolved_by_purchase_order: { id: number; number: string } | null;
+}
+
+/* ---------- purchase orders, suppliers, reorder ---------- */
+
+export type PoStatus = "draft" | "approved" | "sent" | "partial" | "received" | "cancelled";
+
+export interface PurchaseOrder {
+  id: number;
+  number: string;
+  status: PoStatus | string;
+  automatic: boolean;
+  supplier: { id: number; name: string; email: string | null } | null;
+  location: { id: number; name: string } | null;
+  expected_at: string | null;
+  notes: string | null;
+  currency: string;
+  lines: { variant_id: number; title: string; sku: string | null; quantity: number; received_quantity: number; unit_cost: number | null; line_total: number | null }[];
+  line_count: number;
+  units: number;
+  total: number;
+  warnings: string[];
+  created_at: string;
+  approved_at: string | null;
+  sent_at: string | null;
+  emailed_at: string | null;
+  received_at: string | null;
+  cancelled_at: string | null;
+}
+
+export interface Supplier {
+  id: number;
+  name: string;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  lead_time_days: number;
+  lead_time_effective_days: number | null;
+  lead_time_latest_days: number | null;
+  lead_time_trend: "faster" | "slower" | "steady" | string | null;
+  deliveries_90d: number;
+  min_order_value: number | null;
+  currency: string;
+  payment_terms: string | null;
+  vendors: string[];
+  categories: string[];
+  product_count: number;
+  scorecard: { on_time_rate: number | null; fill_rate: number | null; open_order_value: number } | null;
+}
+
+export interface ReorderPlan {
+  variant_id: number;
+  title: string;
+  sku: string | null;
+  status: string;
+  confidence: string | null;
+  top: { on_hand: number; on_order: number; forecast_per_day: number; runs_out_on: string | null; arrives_on: string | null; suggested_quantity: number };
+  supplier_id: number | null;
+  suppliers: { supplier_id: number; name: string; lead_time_days: number; lead_time_basis: string; arrives_on: string; quantity: number; unit_cost: number | null; min_order_value: number | null; tags: string[]; selected: boolean }[];
+  inputs: { coverage_days: number; lead_time_days: number; lead_time_is_override: boolean; case_pack: number; min_order_qty: number };
+  quantity: {
+    sold_during_lead_time: number; lead_time_days: number; forecast_per_day: number; sold_during_coverage: number; coverage_days: number;
+    safety_stock: number; safety_stock_basis: string; service_level: number; stock_to_have: number; on_hand: number; on_order: number;
+    short_by: number; raised_to_minimum: number | null; rounded_to_case_pack: number | null; case_pack: number; min_order_qty: number;
+  };
+  suggested_quantity: number;
+  reorder_point: number;
+  effect: { date: string; without_order: number; with_order: number; safety_stock: number }[];
+  warnings?: string[];
+}
+
+/* ---------- Ask StockSense ---------- */
+
+export interface AskChart {
+  type: "line" | "bar";
+  title: string;
+  series: { name: string; style?: string; points: { x: string; y: number }[] }[];
+  markers?: unknown[];
+}
+export interface AskAnswer { conversation_id: number; answer: string; charts?: AskChart[] }
+export interface AskUsage { plan: string; questions_this_month: number; monthly_limit: number | null; remaining: number | null; resets_on: string; configured: boolean }
+export interface AskConversation { id: number; title: string; messages: number; updated_at: string }

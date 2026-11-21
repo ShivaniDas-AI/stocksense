@@ -114,6 +114,19 @@ export const riskMeta: Record<RiskLevel, { label: string; tone: ToneName; hint: 
 
 export const RISK_ORDER: RiskLevel[] = ["critical", "low_stock", "healthy", "overstocked", "no_demand", "untracked"];
 
+/** Forecast statuses from /api/v1 (the user guide's wording). */
+export type Status = "reorder_now" | "watch" | "healthy" | "overstocked" | "no_sales" | "untracked";
+export const STATUS_ORDER: Status[] = ["reorder_now", "watch", "healthy", "overstocked", "no_sales", "untracked"];
+export const statusMeta: Record<Status, { label: string; tone: ToneName; hint: string }> = {
+  reorder_now: { label: "Reorder now", tone: "danger", hint: "Order now or it runs out before a delivery can arrive" },
+  watch: { label: "Watch", tone: "warning", hint: "Runs out within the lead time plus four weeks" },
+  healthy: { label: "Healthy", tone: "success", hint: "Enough stock for the lead time and beyond" },
+  overstocked: { label: "Overstocked", tone: "info", hint: "More stock than the overstock window needs" },
+  no_sales: { label: "No sales", tone: "neutral", hint: "Never sold, so there is no demand to forecast" },
+  untracked: { label: "Untracked", tone: "accent", hint: "Stock is not tracked in your store" },
+};
+export const statusOf = (s: string | null | undefined) => statusMeta[(s as Status)] ?? statusMeta.no_sales;
+
 export function tone(t: Theme, name: ToneName) {
   switch (name) {
     case "danger": return { fg: t.danger, bg: t.dangerSoft };
