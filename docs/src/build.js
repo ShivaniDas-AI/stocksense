@@ -5,7 +5,8 @@ const fs = require("fs");
 const { marked } = require("marked");
 
 const [, , mdPath, svgPath, outPath] = process.argv;
-let md = fs.readFileSync(mdPath, "utf8");
+// Git on Windows may check the file out with CRLF; the patterns below expect LF.
+let md = fs.readFileSync(mdPath, "utf8").replace(/\r\n/g, "\n");
 const svg = fs.readFileSync(svgPath, "utf8");
 
 // Drop the doc's own title and byline; the cover page replaces them.

@@ -1,12 +1,12 @@
 # StockSense Project Report
 
-Nov 20, 2026 · @Pradeep
+Nov 21, 2026 · @Pradeep
 
 ## Summary
 
 StockSense predicts which products an online store will run out of, when, and how much to reorder, 2 to 8 weeks ahead. It connects to Shopify, BigCommerce and WooCommerce stores, copies their products, stock and orders, and runs a statistical forecast for every SKU each night and right after each sync.
 
-The working product today is a web dashboard, an Android and iOS mobile app that also runs in a PC browser, and daily alerts by email. On top of the forecast it now plans purchasing: suppliers, reorder quantities, purchase orders, alerts, multi-location transfers and promotions. Merchants' own systems can use all of it through a public REST API with signed webhooks, ask questions in plain words through Ask StockSense, and run the main tasks from WhatsApp. Two stores are connected for testing, a Shopify development store and a BigCommerce sample store, plus a demo store with sample data.
+The working product today is a web dashboard, an Android and iOS mobile app that also runs in a PC browser, and daily alerts by email. On top of the forecast it plans purchasing: suppliers, reorder quantities, purchase orders, alerts, multi-location transfers and promotions, all of it in the mobile app. Merchants' own systems can use the same features through a public REST API with signed webhooks. Ask StockSense answers questions in plain words with an OpenAI, Google Gemini or Claude key, and the main tasks also run from WhatsApp. Two stores are connected for testing, a Shopify development store and a BigCommerce sample store, plus a demo store with sample data.
 
 Everything runs on one Windows laptop in Docker, exposed through an ngrok tunnel, so it stops when the laptop shuts down. The code is on GitHub at [ShivaniDas-AI/stocksense](https://github.com/ShivaniDas-AI/stocksense).
 
@@ -35,8 +35,8 @@ The server owns everything that talks to the outside world; the worker only read
 | Forecast worker | Python 3.11, statsforecast (AutoETS, Croston SBA, moving average), pandas, numpy, psycopg2 |
 | Database | PostgreSQL 16, versioned migrations in `schema_migrations` |
 | Web dashboard | Plain HTML, CSS and JavaScript; installable as a PWA |
-| Mobile app | Expo SDK 58, React Native 0.88, TypeScript, React Navigation, TanStack Query |
-| AI and messaging | Anthropic API (`@anthropic-ai/sdk`, model `claude-opus-5-5`) for Ask StockSense; Meta WhatsApp Cloud API; Twilio for SMS; Slack incoming webhooks; resvg for chart images |
+| Mobile app | Expo SDK 58, React Native 0.88, TypeScript, React Navigation, TanStack Query, react-native-svg charts |
+| AI and messaging | OpenAI, Google Gemini or Claude (Anthropic) for Ask StockSense, one provider at a time; Meta WhatsApp Cloud API; Twilio for SMS; Slack incoming webhooks; resvg for chart images |
 | Infrastructure | Docker Compose, ngrok tunnel, Resend for email, GitHub for code |
 | Store APIs | Shopify Admin REST, BigCommerce V2 and V3, WooCommerce REST v3 |
 
@@ -76,27 +76,31 @@ The dashboard and app show these KPIs, computed on the server for the latest for
 
 ## Mobile app
 
-The app in the `mobile` folder is built with Expo (React Native and TypeScript), so one codebase runs on Android, iOS and a PC browser. It uses the same REST API as the web dashboard and signs in with a bearer token instead of a cookie.
+The app in the `mobile` folder is built with Expo (React Native and TypeScript), so one codebase runs on Android, iOS and a PC browser. It reads the same `/api/v1` data as the public API, so every status and number matches the server, and it signs in with a bearer token instead of a cookie. It has five tabs: Home, Orders, Alerts, WhatsApp and Settings.
 
 | Screen | What it shows |
 | --- | --- |
-| Connect | Platform picker and token fields for BigCommerce, Shopify or WooCommerce, with help on where to find each token |
-| Dashboard | Stockout hero card, six KPI tiles, filter chips with counts, search, product cards with risk colour and key metrics |
-| Product | Stock, cover, stockout and reorder tiles, a 90-day sales and 8-week forecast chart, lead time and safety stock steppers |
-| Alerts | Items from the daily digest, with a dismiss action |
-| Settings | Store switcher, server address with a connection test, log out |
+| Home | Reorder-now count and revenue at risk, a status bar across all products, six key numbers, weekly units sold and forecast, running low, and the product list with status filters, search and sort |
+| Key number detail | Opens from any key number: headline figures with the change against the previous period, daily and weekly charts, breakdowns by category or band, and product tables. Covers sales, forecast, forecast accuracy, days of cover, cash in overstock, revenue protected and revenue at risk |
+| Product | Recommended action, stock projection with its 80% range and reorder point, weekly demand, confidence and accuracy, supplier and lead time, editable reorder rules |
+| Reorder | Suppliers side by side with lead time and arrival date, the quantity worked out line by line, and a button that creates the draft purchase order |
+| Orders | Purchase orders by status with approve, send, receive and cancel, and supplier scorecards: lead time trend, on-time rate and fill rate |
+| Alerts | The five alert types with what to do, open, resolved and dismissed views, dismiss and reopen, and a count on the tab |
+| WhatsApp | Link a phone with a 6-digit code, approval rights per phone, the activity log, and a chat preview that runs the real assistant with menus, buttons and chart images |
+| Ask StockSense | Questions in plain words with answers and charts from live data; shows the setup steps when no AI key is set |
+| Settings | Stores on this phone, plan and usage, AI status, API keys, server address, log out |
 
-The design uses a light neutral palette with one brand blue, colour only for risk meaning, and switches to dark mode with the phone.
+The design uses a light neutral palette with one brand blue, uses colour only for meaning, and follows the phone's dark mode. Every screen has its own error screen, so a problem on one screen shows its message and a Try again button instead of a blank app. On Android the text uses the Inter font families without extra weights, and input bars stay above the keyboard and the navigation bar.
 
 **How it reaches the server.** On a phone the app calls the ngrok address, which forwards to the server on the laptop. In a PC browser it calls `http://localhost:3000` directly. The address can be changed under Settings once the server has a permanent domain.
 
-**Run it.** From the `mobile` folder run `npx expo start`. Scan the QR code with the Expo Go app on a phone on the same Wi-Fi, or open `http://localhost:8081` in a browser.
+**Run it.** In a terminal, `cd mobile` first (Expo fails with a ConfigError in the project root), then run `npx expo start`, or `npx expo start -c` after an update to clear its cache. Scan the QR code with the Expo Go app on a phone on the same Wi-Fi, or press w to open `http://localhost:8081` in a browser.
 
 **Build an installable APK.** Run `npx eas-cli build -p android --profile preview`. Expo's free cloud build service produces the file; no Android Studio is needed.
 
 ## Planning features
 
-On 20 November 2026 every feature in the StockSense user guide was built on top of the forecast. Each one works through the public API and, where it makes sense, on WhatsApp; the app screens for them are still to come. The store's plan decides which features are switched on.
+On 20 November 2026 every feature in the StockSense user guide was built on top of the forecast, and on 21 November the mobile app gained screens for them. Each one works in the app, through the public API and, where it makes sense, on WhatsApp. The store's plan decides which features are switched on.
 
 | Feature | What it does |
 | --- | --- |
@@ -120,7 +124,7 @@ Plan limits are enforced on the server. A request for a feature outside the plan
 
 ## REST API and webhooks
 
-The public API lets a merchant's own systems read forecasts and run the planning features. It lives at `{APP_URL}/api/v1` (also `/v1`), has 78 operations described in an OpenAPI 3.1 spec at `/api/v1/openapi.json`, and an interactive console at `/docs` where a key can be pasted to try every call.
+The public API lets a merchant's own systems read forecasts and run the planning features. It lives at `{APP_URL}/api/v1` (also `/v1`), has 79 operations described in an OpenAPI 3.1 spec at `/api/v1/openapi.json`, and an interactive console at `/docs` where a key can be pasted to try every call.
 
 - **Keys.** API keys are a Pro feature. A live key starts `ss_live_` and can read and write. A sandbox key starts `ss_test_`: it reads live data, but every write is rolled back and the response says `"sandbox": true`. Keys are created in the app's Settings, API keys, shown once, and stored only as a SHA-256 hash. Each key sees one store.
 - **Auth and limits.** Send `Authorization: Bearer <key>` or `X-API-Key: <key>`. Each key gets 120 requests a minute, reported in `X-RateLimit-*` headers; over the limit the API answers `429` with `Retry-After`.
@@ -134,7 +138,7 @@ The public API lets a merchant's own systems read forecasts and run the planning
 | Suppliers | `GET/POST /suppliers`, `GET/PATCH/DELETE /suppliers/{id}`, `GET /vendors`, `GET /categories` |
 | Alerts | `GET /alerts`, `GET /alerts/{id}`, `POST /alerts/{id}` with dismiss or reopen, `POST /alerts/check` |
 | Locations and transfers | `GET/POST /locations`, `GET/PUT /locations/{id}/inventory`, `GET /transfers/suggestions`, `GET/POST /transfers`, `POST /transfers/{id}` with ship, receive or cancel |
-| Insights and settings | `GET /dashboard`, `GET /summary`, `GET /store`, `GET /plan`, `GET/PATCH /settings/forecasting`, `GET/PATCH /settings/notifications`, promotions |
+| Insights and settings | `GET /dashboard`, `GET /kpis/{metric}` (the detail behind each key number), `GET /summary`, `GET /store`, `GET /plan`, `GET/PATCH /settings/forecasting`, `GET/PATCH /settings/notifications`, promotions |
 | Webhooks | `GET/POST /webhooks`, `PATCH/DELETE /webhooks/{id}`, `POST /webhooks/{id}/test`, `GET /webhooks/{id}/deliveries` |
 | Data | `GET /data/status`, `POST /data/rebuild`, `POST /data/reimport`, `POST/DELETE /data/demo` |
 | Ask and WhatsApp | `POST /ask`, the `/ask/conversations` routes, `/whatsapp` settings, link codes, numbers, activity and a simulator |
@@ -145,7 +149,7 @@ A test script, `server/test/api_e2e.py`, runs 107 end-to-end checks against the 
 
 ## Ask StockSense
 
-Ask StockSense answers questions about the store in plain words, in the app and on WhatsApp, such as "what should I reorder this week?" or "why is the blue mug flagged?". It uses Claude (`claude-opus-5-5`) through the Anthropic API.
+Ask StockSense answers questions about the store in plain words, in the app and on WhatsApp, such as "what should I reorder this week?" or "why is the blue mug flagged?". It works with any one of three AI providers: OpenAI (in use today, model `gpt-6-luna`), Google Gemini or Claude.
 
 - **Grounded in live data.** The model does not guess numbers. It calls ten read tools on the store's own data: overview, forecasts, one forecast, reorder plan, suppliers, alerts, purchase orders, transfer suggestions, a chart, and drafting a purchase order. At most 8 tool rounds run per question.
 - **Charts.** Answers can include a projected-stock, weekly-demand or days-of-cover chart. On WhatsApp the chart is sent as an image.
@@ -153,7 +157,7 @@ Ask StockSense answers questions about the store in plain words, in the app and 
 - **Conversations** are saved, can be renamed and deleted, and continue where they left off.
 - **Limits.** Scale includes 100 questions a month and Pro is unlimited; `GET /ask/usage` shows what is left.
 
-It needs `ANTHROPIC_API_KEY` in `.env`; without it Ask reports that it is not configured and everything else keeps working.
+It needs one key in `.env`: `OPENAI_API_KEY`, `GEMINI_API_KEY` or `ANTHROPIC_API_KEY`; with several, `AI_PROVIDER` picks one. Each provider moves on to its next current model if one is unavailable, and a key pasted on the wrong line is detected and explained in the app. A test question on 21 November was answered correctly in about 5 seconds. Without a key, Ask shows the setup steps and everything else keeps working.
 
 ## WhatsApp assistant
 
@@ -168,10 +172,17 @@ The Meta webhook URL is `{APP_URL}/webhooks/whatsapp`, verified with `WHATSAPP_V
 
 ## Work completed
 
-Eleven commits between 27 October and 20 November 2026 took the project from a dashboard stuck on "Syncing" to a working web and mobile product with a public API, AI answers and a WhatsApp assistant.
+Eighteen commits between 27 October and 21 November 2026 took the project from a dashboard stuck on "Syncing" to a working web and mobile product with a public API, AI answers and a WhatsApp assistant.
 
 | Commit | Change |
 | --- | --- |
+| [a7888a5](https://github.com/ShivaniDas-AI/stocksense/commit/a7888a5) | Ask StockSense runs on an OpenAI key; tested with a real question |
+| [9d788fd](https://github.com/ShivaniDas-AI/stocksense/commit/9d788fd) | Google Gemini as an AI provider, and detection of keys pasted on the wrong line |
+| [64c9a6c](https://github.com/ShivaniDas-AI/stocksense/commit/64c9a6c) | Fixed the BigCommerce crash on the Orders screens (warnings shown as objects), per-screen error screens, Android font and keyboard fixes |
+| [b999cb6](https://github.com/ShivaniDas-AI/stocksense/commit/b999cb6) | Key number detail screens with figures, charts and tables, and the `/kpis/{metric}` endpoint |
+| [21ad7a5](https://github.com/ShivaniDas-AI/stocksense/commit/21ad7a5) | Mobile app moved to the v1 data, with Orders, Reorder, Alerts, WhatsApp and Ask screens; BigCommerce product names include the product |
+| [12d45b7](https://github.com/ShivaniDas-AI/stocksense/commit/12d45b7) | Step-by-step guide in the README to start on the laptop and phone |
+| [75f3987](https://github.com/ShivaniDas-AI/stocksense/commit/75f3987) | This report updated with the API, webhooks, WhatsApp and Ask StockSense |
 | [bf0ee20](https://github.com/ShivaniDas-AI/stocksense/commit/bf0ee20) | Built every feature in the user guide behind `/api/v1`: forecast statuses and backtests, reorder plans, suppliers, purchase orders, alerts, locations and transfers, promotions, plans, outgoing webhooks, Ask StockSense, the WhatsApp assistant and 107 end-to-end tests |
 | [2eafe3a](https://github.com/ShivaniDas-AI/stocksense/commit/2eafe3a) | First public API (v1) with API keys, rate limits and interactive docs at `/docs` |
 | [6f694d9](https://github.com/ShivaniDas-AI/stocksense/commit/6f694d9) | Refined mobile app design; this report as a PDF with go-live requirements |
@@ -227,7 +238,10 @@ Everything an engineer needs to configure, call or debug the system is on this p
 | `ALERT_FROM_EMAIL`, `ALERT_TO_EMAIL` | Sender of all email, and the fallback recipient when a store has no alert email set | `alerts@stocksense.app`, empty |
 | `ALERT_DIGEST_HOUR` | Hour of the daily digest, server local time | `8` |
 | `BACKFILL_MONTHS` | Months of order history pulled on first connect | `18` |
-| `ANTHROPIC_API_KEY`, `ASK_MODEL` | Anthropic API key for Ask StockSense and AI answers on WhatsApp; optional model override | empty, `claude-opus-5-5` |
+| `OPENAI_API_KEY`, `OPENAI_MODEL` | OpenAI key for Ask StockSense and AI answers on WhatsApp (set today); optional model | empty; first of `gpt-6-luna`, `gpt-6.1-terra` that works |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Google Gemini key from aistudio.google.com/apikey; optional model | empty; first stable Flash model that works |
+| `ANTHROPIC_API_KEY`, `ASK_MODEL` | Claude key (starts with sk-ant-); optional model | empty, `claude-opus-5-5` |
+| `AI_PROVIDER` | Which AI to use when several keys are set: `openai`, `gemini` or `anthropic` | OpenAI, then Gemini, then Claude |
 | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_NUMBER` | Meta WhatsApp Cloud API access token, sending number id and the number shown to merchants | empty |
 | `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` | Meta webhook verification token and the app secret that signs incoming messages | empty |
 | `WHATSAPP_ALERT_TEMPLATE` | Approved template with one body variable, for alerts outside the 24-hour window | empty |
@@ -293,8 +307,12 @@ There are two APIs. The public API under `/api/v1` is described in the REST API 
 | API answers `402` | The feature is not in the store's plan; the message names the plan needed |
 | API answers `429` | More than 120 requests a minute on one key; wait for `Retry-After` seconds |
 | A webhook endpoint gets nothing | Check `GET /api/v1/webhooks/{id}/deliveries` for the status code and error; endpoints must be HTTPS unless `WEBHOOKS_ALLOW_HTTP=true` |
-| Ask or WhatsApp says it is not configured | `ANTHROPIC_API_KEY` or the `WHATSAPP_*` values are empty in `.env`; set them and restart the server |
+| Ask shows "Needs key" or "Wrong key" | No AI key, or a key on the wrong line of `.env` (for example an OpenAI key on `ANTHROPIC_API_KEY`). Fix it, then run `docker compose up -d --force-recreate server` |
+| WhatsApp says it is not configured | The `WHATSAPP_*` values are empty in `.env`; until then use the chat preview in the app |
 | WhatsApp approval says it expired | Approvals are valid for 30 minutes; start again from the menu |
+| `ConfigError` about `package.json` when starting the app | Expo was started in the project root; `cd mobile` first |
+| App shows a blank page after an update | Expo's cache is out of date; stop it with Ctrl+C and run `npx expo start -c` in the `mobile` folder |
+| A screen shows "This screen hit a problem" | That screen crashed and the message names the cause; tap Try again, and report the message if it repeats |
 
 ## What is required to go live
 
@@ -355,12 +373,12 @@ Going live means real merchants can connect a store and trust the numbers withou
 ### 7. API, AI and WhatsApp
 
 - [ ] Publish the API docs at the live domain and keep `WEBHOOKS_ALLOW_HTTP` off, so outgoing webhooks only go to HTTPS
-- [ ] Anthropic API key from console.anthropic.com in `ANTHROPIC_API_KEY`, with a monthly spend limit set in the console
+- [ ] Keep one AI key for Ask StockSense (OpenAI is set today; Gemini or Claude also work) and set a monthly spend limit in that provider's console
 - [ ] Meta Business account, a WhatsApp Business phone number and a Cloud API app; set the `WHATSAPP_*` values and the webhook URL `{APP_URL}/webhooks/whatsapp`
 - [ ] Meta business verification and an approved alert template for messages outside the 24-hour window
 - [ ] Twilio account and sending number for SMS alerts, if SMS is offered
 - [ ] Shopify scopes `read_locations` and `write_inventory` approved, so locations and stock adjustments work on Shopify
-- [ ] Terms that cover AI answers and messages sent on the merchant's behalf
+- [ ] Terms that cover AI answers, name the AI provider that processes store data, and cover messages sent on the merchant's behalf
 
 ### Estimated cost to run live
 
@@ -371,7 +389,7 @@ Going live means real merchants can connect a store and trust the numbers withou
 | Domain (optional, custom) | about 1 |
 | Email via Resend, under 3,000 messages | 0 |
 | Error tracking and uptime monitoring, free tiers | 0 |
-| Ask StockSense on the Anthropic API | pay per use; depends on question volume, so set a monthly limit |
+| Ask StockSense on OpenAI `gpt-6-luna` | pay per use: about 0.10 USD per million input tokens, a fraction of a cent a question; set a monthly limit |
 | WhatsApp Cloud API | replies inside 24 hours are free; alert templates are charged per message by Meta, by country |
 | SMS via Twilio (optional) | per message, by country |
 | Google Play registration | 25 once |
@@ -388,11 +406,12 @@ The biggest gap is hosting: until the backend moves off the laptop, real merchan
 - [ ] Validate WooCommerce keys before saving, and rate-limit the connect endpoints
 - [ ] Sync unit cost, so inventory value and reorder spend use cost instead of retail price
 - [ ] Connect billing; plans are set per store in the database today
-- [ ] Create draft transfers in Shopify itself; transfers are tracked in StockSense only
+- [ ] Create draft transfers in Shopify itself; transfers are tracked in StockSense only and have no app screen yet
 - [ ] Detect past promotions automatically from sales spikes; today promotions are entered by hand
-- [ ] Set up the Anthropic and Meta accounts so Ask StockSense and the live WhatsApp assistant run; both are tested through the API and the simulator only
+- [ ] Set up the Meta account so the WhatsApp assistant runs live; today it is used through the chat preview in the app
+- [ ] Test the app on a real phone build; it was checked in a browser at phone size and through the phone's server traffic, not on an Android emulator
+- [ ] Bring the web dashboard onto the new design and planning features; the mobile app already has them
 - [ ] Push notifications on the phone for new critical items
-- [ ] Bring the web dashboard and mobile app screens onto the new planning features; today they are complete in the API
 - [ ] Build a signed APK and publish to Google Play (one-time 25 USD fee)
 
-Running cost today is zero: all software is open source, forecasting uses no paid API, and email uses Resend's free tier of 3,000 messages a month. Ask StockSense, WhatsApp alert templates and SMS add usage-based costs once their accounts are set up.
+Hosting costs nothing today: all software is open source, forecasting uses no paid API, and email uses Resend's free tier of 3,000 messages a month. Ask StockSense now runs on the OpenAI key and is billed per question by OpenAI, a fraction of a cent each on `gpt-6-luna`. WhatsApp alert templates and SMS add usage-based costs once their accounts are set up.
