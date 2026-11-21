@@ -3,6 +3,8 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Sc
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { api, imageSource } from "../api/client";
 import type { BotMessage } from "../api/types";
 import { Button, Card, Input } from "../components/ui";
@@ -27,6 +29,8 @@ function Rich({ text, color }: { text: string; color: string }) {
 
 export function WhatsAppChatScreen() {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const qc = useQueryClient();
   const status = useQuery({ queryKey: ["whatsapp"], queryFn: api.whatsapp });
   const numbers = status.data?.connected_numbers ?? [];
@@ -121,7 +125,7 @@ export function WhatsAppChatScreen() {
 
   /* ---------- chat ---------- */
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: chatBg }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: chatBg }} behavior="padding" keyboardVerticalOffset={headerHeight}>
       <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: t.surface, borderBottomWidth: 1, borderBottomColor: t.border, paddingHorizontal: space.lg, paddingVertical: 10 }}>
         <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: WA_GREEN, alignItems: "center", justifyContent: "center", marginRight: 10 }}>
           <Ionicons name="cube" size={17} color="#fff" />
@@ -167,7 +171,7 @@ export function WhatsAppChatScreen() {
         ) : null}
       </ScrollView>
 
-      <View style={{ flexDirection: "row", alignItems: "center", padding: 8, gap: 8, backgroundColor: chatBg, maxWidth: 680, width: "100%", alignSelf: "center" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", padding: 8, paddingBottom: Math.max(insets.bottom, 8), gap: 8, backgroundColor: chatBg, maxWidth: 680, width: "100%", alignSelf: "center" }}>
         <Pressable onPress={() => send({ text: "menu" })} hitSlop={6} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.surface, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="menu" size={20} color={t.textSecondary} />
         </Pressable>
@@ -236,10 +240,11 @@ function ChartImage({ url }: { url: string }) {
 
 function ListSheet({ m, onClose, onPick }: { m: ListMsg | null; onClose: () => void; onPick: (id: string, title: string) => void }) {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   return (
-    <Modal visible={!!m} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={!!m} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(2,6,23,0.45)", justifyContent: "flex-end" }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: t.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: space.xl, maxHeight: "80%", maxWidth: 680, width: "100%", alignSelf: "center" }}>
+        <Pressable onPress={() => {}} style={{ backgroundColor: t.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: space.lg + insets.bottom, maxHeight: "80%", maxWidth: 680, width: "100%", alignSelf: "center" }}>
           <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: t.border, alignSelf: "center", marginVertical: space.md }} />
           <Text style={[type.heading, { color: t.text, textAlign: "center", marginBottom: space.sm }]}>{m?.button}</Text>
           <ScrollView>

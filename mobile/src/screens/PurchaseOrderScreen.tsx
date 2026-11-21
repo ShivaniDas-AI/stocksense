@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "../api/client";
+import { warningText } from "../api/types";
 import { Button, Card, Notice, Pill, SectionTitle, Stat, StatusView, Stepper, confirm, notify } from "../components/ui";
 import { space, tone, type, useTheme } from "../theme";
 import { dateLabel, money, num } from "../utils/format";
@@ -97,7 +98,7 @@ export function PurchaseOrderScreen({ route, navigation }: Props) {
           </Notice>
         </View>
       ) : null}
-      {o.warnings.map((w) => <Notice key={w} icon="warning-outline" toneName="warning">{w}</Notice>)}
+      {o.warnings.map((w, i) => <Notice key={i} icon="warning-outline" toneName="warning">{warningText(w)}</Notice>)}
 
       <SectionTitle>{`Products (${o.lines.length})`}</SectionTitle>
       <Card style={{ paddingVertical: 4 }}>

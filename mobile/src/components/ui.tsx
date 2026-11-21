@@ -15,6 +15,7 @@ import { Image } from "expo-image";
 import { Alert, Platform } from "react-native";
 import { fw, radius, riskMeta, RiskLevel, shadow, space, statusOf, tone, ToneName, type, useTheme } from "../theme";
 import { haptic } from "../utils/haptics";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -388,10 +389,11 @@ export function OptionSheet<T extends string>({
   onClose: () => void;
 }) {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(2,6,23,0.45)", justifyContent: "flex-end" }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: t.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: space.lg, paddingBottom: space.xxl }}>
+        <Pressable onPress={() => {}} style={{ backgroundColor: t.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: space.lg, paddingBottom: space.xl + insets.bottom, maxWidth: 680, width: "100%", alignSelf: "center" }}>
           <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: t.border, alignSelf: "center", marginBottom: space.md }} />
           <Text style={[type.heading, { color: t.text, marginBottom: space.sm }]}>{title}</Text>
           {options.map((o, i) => {

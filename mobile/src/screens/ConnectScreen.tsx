@@ -62,7 +62,7 @@ export function ConnectScreen({ onDone }: { onDone?: () => void }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: space.lg, paddingTop: space.xxl }} keyboardShouldPersistTaps="handled">
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: space.sm }}>
             <View style={{ width: 44, height: 44, borderRadius: radius.md, backgroundColor: t.primary, alignItems: "center", justifyContent: "center", marginRight: 12 }}>

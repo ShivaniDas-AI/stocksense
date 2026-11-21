@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "../api/client";
+import { warningText } from "../api/types";
 import { Button, Card, Notice, Pill, SectionTitle, Stat, StatusBadge, StatusView, Stepper, notify } from "../components/ui";
 import { fw, radius, space, type, useTheme } from "../theme";
 import { dateLabel, money, num, rate } from "../utils/format";
@@ -141,8 +142,8 @@ export function ReorderScreen({ route, navigation }: Props) {
           {`${selected!.name} asks for at least ${money(selected!.min_order_value, currency)} an order. Add more units or other products to the draft.`}
         </Notice>
       ) : null}
-      {(p.warnings ?? []).map((w) => (
-        <Notice key={w} icon="warning-outline" toneName="warning">{w}</Notice>
+      {(p.warnings ?? []).map((w, i) => (
+        <Notice key={i} icon="warning-outline" toneName="warning">{warningText(w)}</Notice>
       ))}
 
       <View style={{ marginTop: space.md }}>

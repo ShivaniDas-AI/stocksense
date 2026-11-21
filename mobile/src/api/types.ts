@@ -345,7 +345,7 @@ export interface PurchaseOrder {
   line_count: number;
   units: number;
   total: number;
-  warnings: string[];
+  warnings: Warning[];
   created_at: string;
   approved_at: string | null;
   sent_at: string | null;
@@ -392,7 +392,7 @@ export interface ReorderPlan {
   suggested_quantity: number;
   reorder_point: number;
   effect: { date: string; without_order: number; with_order: number; safety_stock: number }[];
-  warnings?: string[];
+  warnings?: Warning[];
 }
 
 /* ---------- Ask StockSense ---------- */
@@ -421,3 +421,7 @@ export interface KpiDetail {
   charts: { type: "line" | "bar" | "hbar"; title: string; caption?: string; unit: KpiUnit; series: { name: string; style?: string; points: { x: string; y: number }[] }[] }[];
   tables: { title: string; caption?: string; columns: { key: string; label: string; unit?: KpiUnit }[]; rows: Record<string, any>[] }[];
 }
+
+/** Server warnings arrive as {code, message}; older ones as plain text. */
+export type Warning = string | { code?: string; message?: string };
+export const warningText = (w: Warning): string => (typeof w === "string" ? w : w?.message ?? w?.code ?? "");

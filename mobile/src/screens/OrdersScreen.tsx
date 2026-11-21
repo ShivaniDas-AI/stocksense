@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../api/client";
-import type { PurchaseOrder, Supplier } from "../api/types";
+import { warningText, type PurchaseOrder, type Supplier } from "../api/types";
 import { Avatar, Button, Card, Chip, Notice, Pill, ScreenHeader, Segmented, Stat, StatusView, notify } from "../components/ui";
 import { fw, radius, space, tone, ToneName, type, useTheme } from "../theme";
 import { dateLabel, money, num } from "../utils/format";
@@ -129,7 +129,7 @@ function PoCard({ po, onPress }: { po: PurchaseOrder; onPress: () => void }) {
           <Stat label="Total" value={money(po.total, po.currency)} />
           <Stat label={po.status === "received" ? "Received" : "Expected"} value={dateLabel(po.status === "received" ? po.received_at : po.expected_at)} />
         </View>
-        {po.warnings?.length ? <Text style={[type.caption, { color: t.warning, marginTop: 6 }]} numberOfLines={2}>{po.warnings[0]}</Text> : null}
+        {po.warnings?.length ? <Text style={[type.caption, { color: t.warning, marginTop: 6 }]} numberOfLines={2}>{warningText(po.warnings[0])}</Text> : null}
       </Card>
     </Pressable>
   );

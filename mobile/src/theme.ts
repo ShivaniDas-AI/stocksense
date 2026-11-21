@@ -1,4 +1,4 @@
-import { useColorScheme } from "react-native";
+import { Platform, useColorScheme } from "react-native";
 
 /**
  * Design tokens. A restrained, professional palette: neutral surfaces, one
@@ -151,7 +151,9 @@ const FAMILY: Record<400 | 500 | 600 | 700 | 800, string> = {
   800: "Inter_800ExtraBold",
 };
 export const fw = (weight: 400 | 500 | 600 | 700 | 800) =>
-  ({ fontFamily: FAMILY[weight], fontWeight: String(weight) as "400" | "500" | "600" | "700" | "800" });
+  Platform.OS === "android"
+    ? { fontFamily: FAMILY[weight] }
+    : { fontFamily: FAMILY[weight], fontWeight: String(weight) as "400" | "500" | "600" | "700" | "800" };
 
 export const type = {
   display: { ...fw(800), fontSize: 30, letterSpacing: -0.6, lineHeight: 36 },

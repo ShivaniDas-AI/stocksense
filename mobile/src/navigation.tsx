@@ -21,6 +21,7 @@ import type { KpiMetric } from "./api/types";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { ApiKeysScreen } from "./screens/ApiKeysScreen";
 import { useTheme } from "./theme";
+import { guarded } from "./components/ErrorBoundary";
 
 export type RootStackParamList = {
   Tabs: undefined;
@@ -32,6 +33,24 @@ export type RootStackParamList = {
   Metric: { metric: KpiMetric; title: string };
   Connect: undefined;
   ApiKeys: undefined;
+};
+
+
+/** Every screen gets its own error boundary, created once. */
+const G = {
+  AlertsScreen: guarded(AlertsScreen as React.ComponentType<any>),
+  ApiKeysScreen: guarded(ApiKeysScreen as React.ComponentType<any>),
+  AskScreen: guarded(AskScreen as React.ComponentType<any>),
+  ConnectRoute: guarded(ConnectRoute as React.ComponentType<any>),
+  DashboardScreen: guarded(DashboardScreen as React.ComponentType<any>),
+  MetricScreen: guarded(MetricScreen as React.ComponentType<any>),
+  OrdersScreen: guarded(OrdersScreen as React.ComponentType<any>),
+  ProductScreen: guarded(ProductScreen as React.ComponentType<any>),
+  PurchaseOrderScreen: guarded(PurchaseOrderScreen as React.ComponentType<any>),
+  ReorderScreen: guarded(ReorderScreen as React.ComponentType<any>),
+  SettingsScreen: guarded(SettingsScreen as React.ComponentType<any>),
+  WhatsAppChatScreen: guarded(WhatsAppChatScreen as React.ComponentType<any>),
+  WhatsAppScreen: guarded(WhatsAppScreen as React.ComponentType<any>),
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -64,11 +83,11 @@ function Tabs() {
         ),
       })}
     >
-      <Tab.Screen name="Home" component={DashboardScreen} />
-      <Tab.Screen name="Orders" component={OrdersScreen} />
-      <Tab.Screen name="Alerts" component={AlertsScreen} options={{ tabBarBadge: badge, tabBarBadgeStyle: { backgroundColor: t.danger, color: "#fff", fontSize: 10 } }} />
-      <Tab.Screen name="WhatsApp" component={WhatsAppScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Home" component={G.DashboardScreen} />
+      <Tab.Screen name="Orders" component={G.OrdersScreen} />
+      <Tab.Screen name="Alerts" component={G.AlertsScreen} options={{ tabBarBadge: badge, tabBarBadgeStyle: { backgroundColor: t.danger, color: "#fff", fontSize: 10 } }} />
+      <Tab.Screen name="WhatsApp" component={G.WhatsAppScreen} />
+      <Tab.Screen name="Settings" component={G.SettingsScreen} />
     </Tab.Navigator>
   );
 }
@@ -102,17 +121,17 @@ export function Navigation() {
         {token ? (
           <>
             <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
-            <Stack.Screen name="Product" component={ProductScreen} options={{ title: "Product" }} />
-            <Stack.Screen name="Reorder" component={ReorderScreen} options={{ title: "Reorder" }} />
-            <Stack.Screen name="PurchaseOrder" component={PurchaseOrderScreen} options={({ route }) => ({ title: route.params.title })} />
-            <Stack.Screen name="WhatsAppChat" component={WhatsAppChatScreen} options={{ title: "WhatsApp chat" }} />
-            <Stack.Screen name="Ask" component={AskScreen} options={{ title: "Ask StockSense" }} />
-            <Stack.Screen name="Metric" component={MetricScreen} options={({ route }) => ({ title: route.params.title })} />
-            <Stack.Screen name="Connect" component={ConnectRoute} options={{ title: "Add store" }} />
-            <Stack.Screen name="ApiKeys" component={ApiKeysScreen} options={{ title: "API keys" }} />
+            <Stack.Screen name="Product" component={G.ProductScreen} options={{ title: "Product" }} />
+            <Stack.Screen name="Reorder" component={G.ReorderScreen} options={{ title: "Reorder" }} />
+            <Stack.Screen name="PurchaseOrder" component={G.PurchaseOrderScreen} options={({ route }) => ({ title: route.params.title })} />
+            <Stack.Screen name="WhatsAppChat" component={G.WhatsAppChatScreen} options={{ title: "WhatsApp chat" }} />
+            <Stack.Screen name="Ask" component={G.AskScreen} options={{ title: "Ask StockSense" }} />
+            <Stack.Screen name="Metric" component={G.MetricScreen} options={({ route }) => ({ title: route.params.title })} />
+            <Stack.Screen name="Connect" component={G.ConnectRoute} options={{ title: "Add store" }} />
+            <Stack.Screen name="ApiKeys" component={G.ApiKeysScreen} options={{ title: "API keys" }} />
           </>
         ) : (
-          <Stack.Screen name="Connect" component={ConnectRoute} options={{ headerShown: false }} />
+          <Stack.Screen name="Connect" component={G.ConnectRoute} options={{ headerShown: false }} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

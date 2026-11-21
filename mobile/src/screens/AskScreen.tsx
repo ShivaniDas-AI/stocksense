@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useHeaderHeight } from "@react-navigation/elements";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "../api/client";
 import type { AskChart } from "../api/types";
@@ -47,6 +49,8 @@ function Answer({ text }: { text: string }) {
 
 export function AskScreen({ route }: Props) {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const qc = useQueryClient();
   const usage = useQuery({ queryKey: ["askUsage"], queryFn: api.askUsage });
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -89,7 +93,7 @@ export function AskScreen({ route }: Props) {
   }, [u?.configured]);
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.bg }} behavior="padding" keyboardVerticalOffset={headerHeight}>
       <ScrollView ref={scroll} contentContainerStyle={{ padding: space.lg, paddingBottom: space.xl, maxWidth: 760, width: "100%", alignSelf: "center" }} onContentSizeChange={() => { if (msgs.length) scroll.current?.scrollToEnd({ animated: true }); }}>
         {msgs.length === 0 ? (
           <View>
@@ -156,7 +160,7 @@ export function AskScreen({ route }: Props) {
         ) : null}
       </ScrollView>
 
-      <View style={{ flexDirection: "row", alignItems: "flex-end", padding: space.sm, gap: 8, borderTopWidth: 1, borderTopColor: t.border, backgroundColor: t.surface }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-end", padding: space.sm, paddingBottom: Math.max(insets.bottom, space.sm), gap: 8, borderTopWidth: 1, borderTopColor: t.border, backgroundColor: t.surface }}>
         <TextInput
           value={text}
           onChangeText={setText}
