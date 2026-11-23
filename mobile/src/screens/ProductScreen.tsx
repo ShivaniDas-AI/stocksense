@@ -186,7 +186,7 @@ export function ProductScreen({ route, navigation }: Props) {
         <View style={{ flexDirection: "row", marginBottom: space.md, gap: space.sm }}>
           <Stat label="Forecast a day" value={rate(n.forecast_per_day)} />
           <Stat label="Sold a day, 14 d" value={rate(n.rate_per_day)} />
-          <Stat label="Confidence" value={d.confidence ? cap(d.confidence) : "-"} sub={acc != null ? `${acc}% accurate, 4 wk` : undefined} />
+          <Stat label="Confidence" value={d.confidence ? cap(d.confidence) : "-"} sub={acc != null ? `${acc}% accurate weekly` : undefined} />
         </View>
         <WeeklyBars data={d.weekly_demand ?? []} />
         <Legend items={[{ color: t.chartHistory, label: "Units sold a week" }, { color: t.chartForecast, label: "Forecast a week", dashed: true }]} />

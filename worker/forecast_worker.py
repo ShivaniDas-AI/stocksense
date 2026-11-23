@@ -8,7 +8,7 @@ For every store, per product variant (guide chapter 15):
        - more than 60% of days without a sale        -> Croston SBA (intermittent)
        - otherwise                                    -> AutoETS with weekly seasonality
   3. 56 days of daily forecast with an 80% range, lifted on planned promotion days.
-  4. Accuracy: re-forecast the last 4 weeks and compare with real sales -> confidence.
+  4. Accuracy: re-forecast the last 4 weeks and compare weekly totals with real sales -> confidence.
   5. With the store's forecasting settings and the supplier's lead time:
        safety stock  = z x sqrt(LT x daily variation^2 + daily demand^2 x lead time variation^2)
        reorder point = demand during the lead time + safety stock
@@ -202,7 +202,13 @@ def forecast_all(series_by_vid, vids, h):
 
 
 def backtest(series_by_vid, vids):
-    """Re-forecast the last 4 weeks from the history before them; accuracy = 1 - WAPE."""
+    """Re-forecast the last 4 weeks from the history before them; accuracy = 1 - weekly WAPE.
+
+    Errors are measured on weekly totals, not single days: reorders cover weeks
+    of demand, and for a product selling one or two a day, a sale landing on
+    Tuesday instead of Monday is not a forecast miss. Day-level scoring counted
+    every such shift twice and put most slow sellers near 0%.
+    """
     eligible = [v for v in vids if len(series_by_vid[v]) >= BACKTEST_DAYS + 28]
     if not eligible:
         return {}
@@ -218,7 +224,10 @@ def backtest(series_by_vid, vids):
         a = actual[v]
         if a.sum() <= 0:
             continue
-        wape = float(np.abs(a - fc[v][1]).sum() / a.sum())
+        weeks = BACKTEST_DAYS // 7
+        a_w = a[: weeks * 7].reshape(weeks, 7).sum(axis=1)
+        f_w = np.asarray(fc[v][1], dtype=float)[: weeks * 7].reshape(weeks, 7).sum(axis=1)
+        wape = float(np.abs(a_w - f_w).sum() / max(a_w.sum(), 1e-9))
         acc[v] = max(0.0, 1.0 - wape)
     return acc
 

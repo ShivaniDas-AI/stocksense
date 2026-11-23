@@ -252,16 +252,16 @@ async function accuracy(storeId: number, runDate: string | null) {
     { x: "40 to 60%", min: 0.4, max: 0.6 },
     { x: "Below 40%", min: -99, max: 0.4 },
   ].map((b) => ({ x: b.x, y: rows.filter((r: any) => Number(r.accuracy) >= b.min && Number(r.accuracy) < b.max).length }));
-  const toRow = (r: any) => ({ variant_id: Number(r.variant_id), title: r.title, sku: r.sku, accuracy_pct: r1(Math.max(0, Number(r.accuracy)) * 100), rate: r1(Number(r.rate_14d ?? 0)), model: r.model_used, confidence: r.confidence });
+  const toRow = (r: any) => ({ variant_id: Number(r.variant_id), title: r.title, sku: r.sku, accuracy_pct: r1(Math.max(0, Number(r.accuracy)) * 100), rate: String(r1(Number(r.rate_14d ?? 0))), model: r.model_used, confidence: r.confidence });
   const sorted = [...rows].sort((a: any, b: any) => Number(b.accuracy) - Number(a.accuracy));
   return {
     title: "Forecast accuracy",
     summary:
       now != null
-        ? `Over the last 4 weeks the forecast was ${r1(Math.max(0, now) * 100)}% accurate, weighted by how much each product sells (100% minus the weighted absolute error). Products that sell rarely are hard to forecast day by day, which pulls this down.`
+        ? `Over the last 4 weeks the forecast was ${r1(Math.max(0, now) * 100)}% accurate: each product's forecast for each of those weeks was compared with what really sold that week (100% minus the weighted absolute error), weighted by how much each product sells. Slow, irregular sellers are the hardest to forecast and pull this down.`
         : "Accuracy needs a few weeks of regular sales to measure.",
     headline: [
-      { label: "Accuracy now", value: now != null ? r1(Math.max(0, now) * 100) : null, unit: "percent" as Unit, sub: "last 4 weeks, by volume" },
+      { label: "Accuracy now", value: now != null ? r1(Math.max(0, now) * 100) : null, unit: "percent" as Unit, sub: "weekly, last 4 weeks" },
       { label: "Change, 90 days", value: now != null && first != null ? r1((now - first) * 100) : null, unit: "percent" as Unit, sub: "points" },
       { label: "Products measured", value: rows.length, unit: "count" as Unit, sub: "with enough history" },
       { label: "80% or better", value: bands[0].y, unit: "count" as Unit, sub: "products" },
@@ -280,7 +280,7 @@ async function accuracy(storeId: number, runDate: string | null) {
 }
 const accCols: Column[] = [
   { key: "title", label: "Product", unit: "text" },
-  { key: "rate", label: "A day", unit: "units" },
+  { key: "rate", label: "A day", unit: "text" },
   { key: "accuracy_pct", label: "Accuracy", unit: "percent" },
 ];
 

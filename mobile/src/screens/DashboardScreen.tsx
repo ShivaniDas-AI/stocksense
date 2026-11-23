@@ -201,7 +201,7 @@ export function DashboardScreen() {
             icon="checkmark-done-outline"
             toneName={cards.forecast_accuracy.value != null && cards.forecast_accuracy.value >= 70 ? "success" : "warning"}
             value={cards.forecast_accuracy.value != null ? `${Math.round(cards.forecast_accuracy.value)}%` : "-"}
-            sub={cards.forecast_accuracy.value != null ? "last 4 weeks, actual vs forecast" : "needs a few weeks of regular sales"}
+            sub={cards.forecast_accuracy.value != null ? "weekly sales vs forecast, last 4 weeks" : "needs a few weeks of regular sales"}
             onPress={() => openMetric("accuracy", "Forecast accuracy")}
           />
         ) : null}
