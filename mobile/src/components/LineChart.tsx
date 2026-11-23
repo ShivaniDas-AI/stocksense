@@ -1,5 +1,6 @@
 import React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "./AppText";
 import Svg, { Defs, Line, LinearGradient, Path, Polyline, Stop, Text as SvgText } from "react-native-svg";
 import { useTheme } from "../theme";
 

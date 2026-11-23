@@ -1,5 +1,6 @@
 import React from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
+import { Text } from "./AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "./ui";
 import { space, type, useTheme } from "../theme";

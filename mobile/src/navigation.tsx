@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "./auth/AuthContext";
 import { api } from "./api/client";
 import { ConnectScreen } from "./screens/ConnectScreen";
@@ -67,6 +68,7 @@ const TAB_ICONS: Record<string, { on: IconName; off: IconName }> = {
 
 function Tabs() {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   // Open alerts as a badge on the tab.
   const open = useQuery({ queryKey: ["alertsV1", "open"], queryFn: () => api.alertsV1("open"), refetchInterval: 60_000, retry: 0 });
   const badge = open.data?.total ? (open.data.total > 99 ? "99+" : open.data.total) : undefined;
@@ -76,8 +78,10 @@ function Tabs() {
         headerShown: false,
         tabBarActiveTintColor: route.name === "WhatsApp" ? "#128C7E" : t.primary,
         tabBarInactiveTintColor: t.textMuted,
-        tabBarStyle: { backgroundColor: t.surface, borderTopColor: t.border },
-        tabBarLabelStyle: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+        // Room for icon + label above the gesture / navigation bar, and a label size that does not grow with the system font.
+        tabBarStyle: { backgroundColor: t.surface, borderTopColor: t.border, height: 60 + insets.bottom, paddingTop: 6, paddingBottom: Math.max(insets.bottom, 8) },
+        tabBarLabelStyle: { fontSize: 11, lineHeight: 14, fontFamily: "Inter_600SemiBold", marginTop: 2 },
+        tabBarAllowFontScaling: false,
         tabBarIcon: ({ color, focused, size }) => (
           <Ionicons name={focused ? TAB_ICONS[route.name].on : TAB_ICONS[route.name].off} size={size} color={color} />
         ),

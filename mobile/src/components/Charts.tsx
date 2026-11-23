@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { LayoutChangeEvent, Pressable, Text, View } from "react-native";
+import { LayoutChangeEvent, Pressable, View } from "react-native";
+import { Text } from "./AppText";
 import Svg, { G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 import { fw, type, useTheme } from "../theme";
 import type { WeekPoint } from "../api/types";

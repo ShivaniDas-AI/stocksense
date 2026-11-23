@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Linking, Pressable, RefreshControl, ScrollView, Switch, Text, View } from "react-native";
+import { Linking, Pressable, RefreshControl, ScrollView, Switch, View } from "react-native";
+import { Text } from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

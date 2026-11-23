@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Text, TextInput } from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +12,7 @@ import { Avatar, Button, Card, Chip, KpiTile, Notice, OptionSheet, Pill, Section
 import { DashboardSkeleton } from "../components/Skeleton";
 import { StatusBar } from "../components/StatusBar";
 import { HBars, Legend, WeeklyBars } from "../components/Charts";
-import { fw, radius, Status, STATUS_ORDER, statusMeta, statusOf, space, tone, type, useTheme } from "../theme";
+import { fw, radius, Status, STATUS_ORDER, statusMeta, statusOf, space, tone, type, useTheme, useThemeMode } from "../theme";
 import { ago, dateLabel, days, money, num, pctChange, rate } from "../utils/format";
 import type { RootStackParamList } from "../navigation";
 import { useAuth } from "../auth/AuthContext";
@@ -38,6 +39,7 @@ const SORTS: { key: SortKey; label: string; icon: React.ComponentProps<typeof Io
 
 export function DashboardScreen() {
   const t = useTheme();
+  const { setMode } = useThemeMode();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signOut } = useAuth();
   const [filter, setFilter] = useState(AT_RISK);
@@ -145,8 +147,16 @@ export function DashboardScreen() {
           </Text>
         </View>
         <Pressable
+          onPress={() => { haptic.tap(); setMode(t.dark ? "light" : "dark"); }}
+          accessibilityLabel={t.dark ? "Switch to light mode" : "Switch to dark mode"}
+          hitSlop={6}
+          style={({ pressed }) => ({ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceAlt, borderWidth: 1, borderColor: t.border, marginLeft: space.sm, opacity: pressed ? 0.75 : 1 })}
+        >
+          <Ionicons name={t.dark ? "sunny" : "moon"} size={17} color={t.dark ? t.warning : t.textSecondary} />
+        </Pressable>
+        <Pressable
           onPress={() => { haptic.tap(); nav.navigate("Ask"); }}
-          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", backgroundColor: t.primarySoft, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 8, opacity: pressed ? 0.75 : 1 })}
+          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", backgroundColor: t.primarySoft, borderRadius: radius.pill, paddingHorizontal: 12, height: 38, marginLeft: space.sm, opacity: pressed ? 0.75 : 1 })}
         >
           <Ionicons name="sparkles" size={15} color={t.primary} style={{ marginRight: 5 }} />
           <Text style={[fw(700), { color: t.primary, fontSize: 13 }]}>Ask</Text>

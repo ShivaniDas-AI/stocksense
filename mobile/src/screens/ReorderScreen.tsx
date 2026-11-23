@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { Text } from "../components/AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -98,7 +99,7 @@ export function ReorderScreen({ route, navigation }: Props) {
               style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", padding: space.md, borderBottomWidth: i < p.suppliers.length - 1 ? 1 : 0, borderBottomColor: t.border, backgroundColor: on ? t.primarySoft : "transparent", opacity: pressed ? 0.8 : 1 })}
             >
               <Ionicons name={on ? "radio-button-on" : "radio-button-off"} size={20} color={on ? t.primary : t.textMuted} style={{ marginRight: 12 }} />
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, minWidth: 0, marginRight: space.sm }}>
                 <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                   <Text style={[type.bodyStrong, { color: t.text }]}>{s.name}</Text>
                   {s.tags.map((tg) => (TAG[tg] ? <Pill key={tg} toneName="primary">{TAG[tg]}</Pill> : null))}
@@ -108,7 +109,7 @@ export function ReorderScreen({ route, navigation }: Props) {
                   {s.unit_cost != null ? ` · ${money(s.unit_cost, currency)} each` : ""}
                 </Text>
               </View>
-              <Text style={[fw(700), { color: t.text, fontSize: 15 }]}>{num(s.quantity)}</Text>
+              <Text style={[fw(700), { color: t.text, fontSize: 15, flexShrink: 0 }]}>{num(s.quantity)}</Text>
             </Pressable>
           );
         })}

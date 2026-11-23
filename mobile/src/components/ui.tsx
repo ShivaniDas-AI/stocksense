@@ -1,15 +1,6 @@
 import React from "react";
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  Text,
-  TextInput,
-  TextInputProps,
-  View,
-  ViewProps,
-  ViewStyle,
-} from "react-native";
+import { ActivityIndicator, Modal, Pressable, TextInputProps, View, ViewProps, ViewStyle } from "react-native";
+import { Text, TextInput } from "./AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Alert, Platform } from "react-native";

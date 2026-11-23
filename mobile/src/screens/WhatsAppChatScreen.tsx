@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from "react-native";
+import { Text, TextInput } from "../components/AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

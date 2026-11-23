@@ -14,7 +14,7 @@ import {
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { Navigation } from "./src/navigation";
 import { StatusView } from "./src/components/ui";
-import { useTheme } from "./src/theme";
+import { ThemeModeProvider, useTheme } from "./src/theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,9 +50,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Root fontsReady={fontsReady} />
-        </AuthProvider>
+        <ThemeModeProvider>
+          <AuthProvider>
+            <Root fontsReady={fontsReady} />
+          </AuthProvider>
+        </ThemeModeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

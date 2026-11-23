@@ -1,4 +1,6 @@
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform, useColorScheme } from "react-native";
+import { storage } from "./auth/storage";
 
 /**
  * Design tokens. A restrained, professional palette: neutral surfaces, one
@@ -96,8 +98,35 @@ export const dark: Theme = {
   skeleton: "#1E2A40",
 };
 
+/* ---------- light / dark choice ---------- */
+
+/** "system" follows the phone; light and dark are fixed. Saved on the device. */
+export type ThemeMode = "system" | "light" | "dark";
+const MODE_KEY = "ss_theme";
+
+const ThemeModeContext = createContext<{ mode: ThemeMode; setMode: (m: ThemeMode) => void }>({ mode: "system", setMode: () => {} });
+
+export function ThemeModeProvider({ children }: { children: React.ReactNode }) {
+  const [mode, setModeState] = useState<ThemeMode>("system");
+  useEffect(() => {
+    storage.get(MODE_KEY).then((v) => {
+      if (v === "light" || v === "dark" || v === "system") setModeState(v);
+    }).catch(() => {});
+  }, []);
+  const setMode = (m: ThemeMode) => {
+    setModeState(m);
+    storage.set(MODE_KEY, m).catch(() => {});
+  };
+  return React.createElement(ThemeModeContext.Provider, { value: { mode, setMode } }, children);
+}
+
+export const useThemeMode = () => useContext(ThemeModeContext);
+
 export function useTheme(): Theme {
-  return useColorScheme() === "dark" ? dark : light;
+  const system = useColorScheme();
+  const { mode } = useContext(ThemeModeContext);
+  const isDark = mode === "system" ? system === "dark" : mode === "dark";
+  return isDark ? dark : light;
 }
 
 export type RiskLevel = "critical" | "low_stock" | "healthy" | "overstocked" | "no_demand" | "untracked";

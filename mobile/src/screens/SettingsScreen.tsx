@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
+import { Text } from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,9 +8,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Avatar, Button, Card, Input, Pill, Row, ScreenHeader, SectionTitle, confirm, notify } from "../components/ui";
+import { Avatar, Button, Card, Input, Pill, Row, ScreenHeader, SectionTitle, Segmented, confirm, notify } from "../components/ui";
 import { dateLabel } from "../utils/format";
-import { fw, space, type, useTheme } from "../theme";
+import { fw, space, type, useTheme, useThemeMode, type ThemeMode } from "../theme";
 import { haptic } from "../utils/haptics";
 import type { RootStackParamList } from "../navigation";
 import { DEFAULT_API_URL } from "../config";
@@ -18,6 +19,7 @@ const PLATFORM = { shopify: "Shopify", bigcommerce: "BigCommerce", woocommerce: 
 
 export function SettingsScreen() {
   const t = useTheme();
+  const { mode, setMode } = useThemeMode();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { apiUrl, setApiUrl, signIn, signOut } = useAuth();
   const qc = useQueryClient();
@@ -101,6 +103,18 @@ export function SettingsScreen() {
             </Card>
           </>
         ) : null}
+
+        <SectionTitle>Appearance</SectionTitle>
+        <Card>
+          <Segmented<ThemeMode>
+            options={[{ key: "light", label: "Light" }, { key: "dark", label: "Dark" }, { key: "system", label: "Phone setting" }]}
+            value={mode}
+            onChange={setMode}
+          />
+          <Text style={[type.caption, { color: t.textMuted, marginTop: space.sm }]}>
+            {mode === "system" ? "Follows your phone's light or dark mode." : `Always ${mode}. The moon and sun button on Home switches it too.`}
+          </Text>
+        </Card>
 
         <SectionTitle>Assistants</SectionTitle>
         <Card style={{ paddingVertical: 4 }}>

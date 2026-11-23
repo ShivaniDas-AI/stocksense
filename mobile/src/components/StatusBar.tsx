@@ -1,5 +1,6 @@
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "./AppText";
 import { fw, space, Status, STATUS_ORDER, statusMeta, tone, type, useTheme } from "../theme";
 
 /**
