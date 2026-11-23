@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "../api/client";
 import type { ForecastDetailV1 } from "../api/types";
-import { Button, Card, KpiTile, Notice, Row, SectionTitle, Stat, StatusBadge, StatusView, Stepper, Thumb, notify } from "../components/ui";
+import { Button, Card, KpiTile, Notice, Row, SectionTitle, Stat, StatusBadge, StatusView, Stepper, Thumb, notify, Grid2 } from "../components/ui";
 import { ProductSkeleton } from "../components/Skeleton";
 import { Legend, StockChart, WeeklyBars } from "../components/Charts";
 import { fw, radius, space, statusOf, tone, ToneName, type, useTheme } from "../theme";
@@ -153,12 +153,12 @@ export function ProductScreen({ route, navigation }: Props) {
       ) : null}
 
       <SectionTitle>Status</SectionTitle>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+      <Grid2>
         <KpiTile label="On hand" icon="cube-outline" toneName="info" value={untracked ? "-" : num(n.on_hand)} sub={n.on_order || n.in_draft ? `${num(n.on_order)} on order · ${num(n.in_draft)} in drafts` : "units in stock"} />
         <KpiTile label="Days of cover" icon="hourglass-outline" toneName={d.status === "reorder_now" ? "danger" : d.status === "watch" ? "warning" : "neutral"} value={n.cover_days != null ? `${Math.round(n.cover_days)} d` : "-"} sub={`lead time ${n.lead_time_days} d`} />
         <KpiTile label="Runs out" icon="time-outline" toneName={n.runs_out_on ? "warning" : "neutral"} value={dateLabel(n.runs_out_on)} sub={outIn != null ? `in ${outIn} days · order today lands ${dateLabel(n.order_today_lands_on)}` : "not within the forecast"} />
         <KpiTile label="Suggested order" icon="cart-outline" toneName="primary" value={num(n.suggested_quantity)} sub={`reorder point ${num(n.reorder_point)} · safety ${num(Math.round(n.safety_stock ?? 0))}`} />
-      </View>
+      </Grid2>
 
       <SectionTitle>Stock projection</SectionTitle>
       <Card>

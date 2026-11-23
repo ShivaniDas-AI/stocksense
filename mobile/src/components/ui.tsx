@@ -100,7 +100,7 @@ export function KpiTile({
   const c = tone(t, toneName);
   const up = (delta?.value ?? 0) >= 0;
   const body = (
-    <Card style={[{ flex: 1, minWidth: "46%", padding: space.md }, style]}>
+    <Card style={[{ flex: 1, padding: space.md }, style]}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Text style={[type.label, { color: t.textMuted, flex: 1, marginRight: 6 }]} numberOfLines={2}>{label}</Text>
         <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: c.bg, alignItems: "center", justifyContent: "center" }}>
@@ -120,7 +120,7 @@ export function KpiTile({
     </Card>
   );
   if (!onPress) return body;
-  return <Pressable onPress={() => { haptic.tap(); onPress(); }} style={({ pressed }) => ({ flex: 1, minWidth: "46%", opacity: pressed ? 0.8 : 1 })}>{body}</Pressable>;
+  return <Pressable onPress={() => { haptic.tap(); onPress(); }} style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.8 : 1 })}>{body}</Pressable>;
 }
 
 /* ---------- badges, chips, pills ---------- */
@@ -473,4 +473,28 @@ export function notify(title: string, message?: string) {
     return;
   }
   Alert.alert(title, message);
+}
+
+/**
+ * Two equal columns, built as explicit rows. Android's layout engine
+ * miscomputes the height of a wrapping row whose items stretch to a
+ * percentage width, so anything below such a grid was drawn on top of its
+ * second and third rows. Plain rows of two do not have that problem.
+ */
+export function Grid2({ children, gap = space.sm, style }: { children: React.ReactNode; gap?: number; style?: ViewStyle }) {
+  const items = React.Children.toArray(children).filter(Boolean);
+  const rows: React.ReactNode[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return (
+    <View style={[{ gap }, style]}>
+      {rows.map((row, i) => (
+        <View key={i} style={{ flexDirection: "row", gap, alignItems: "stretch" }}>
+          {row.map((cell, j) => (
+            <View key={j} style={{ flex: 1, minWidth: 0 }}>{cell}</View>
+          ))}
+          {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
+        </View>
+      ))}
+    </View>
+  );
 }

@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "../api/client";
 import type { KpiDetail, KpiUnit } from "../api/types";
-import { Button, Card, SectionTitle, StatusBadge, StatusView } from "../components/ui";
+import { Button, Card, SectionTitle, StatusBadge, StatusView, Grid2 } from "../components/ui";
 import { AnswerChart, HBars } from "../components/Charts";
 import { fw, space, type, useTheme } from "../theme";
 import { dateLabel, money } from "../utils/format";
@@ -76,11 +76,11 @@ export function MetricScreen({ route, navigation }: Props) {
 
       {/* Headline figures */}
       {d.headline.length ? (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginTop: space.md }}>
+        <Grid2 style={{ marginTop: space.md }}>
           {d.headline.map((h) => {
             const up = (h.change_pct ?? 0) >= 0;
             return (
-              <Card key={h.label} style={{ flexGrow: 1, flexBasis: "46%", padding: space.md }}>
+              <Card key={h.label} style={{ flex: 1, padding: space.md }}>
                 <Text style={[type.label, { color: t.textMuted }]} numberOfLines={2}>{h.label}</Text>
                 <Text style={[type.kpi, { color: t.text, marginTop: 4 }]} numberOfLines={1} adjustsFontSizeToFit>{fmt(h.value, h.unit, c)}</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, minHeight: 18 }}>
@@ -95,7 +95,7 @@ export function MetricScreen({ route, navigation }: Props) {
               </Card>
             );
           })}
-        </View>
+        </Grid2>
       ) : null}
 
       {/* Charts */}

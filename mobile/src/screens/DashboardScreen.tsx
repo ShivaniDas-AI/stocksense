@@ -8,7 +8,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { api } from "../api/client";
 import type { ForecastRow, KpiMetric } from "../api/types";
-import { Avatar, Button, Card, Chip, KpiTile, Notice, OptionSheet, Pill, SectionTitle, StatusBadge, StatusView, Thumb } from "../components/ui";
+import { Avatar, Button, Card, Chip, KpiTile, Notice, OptionSheet, Pill, SectionTitle, StatusBadge, StatusView, Thumb, Grid2 } from "../components/ui";
 import { DashboardSkeleton } from "../components/Skeleton";
 import { StatusBar } from "../components/StatusBar";
 import { HBars, Legend, WeeklyBars } from "../components/Charts";
@@ -202,7 +202,7 @@ export function DashboardScreen() {
 
       {/* KPIs */}
       <SectionTitle action={<Text style={[type.caption, { color: t.textMuted }]}>Tap one for detail</Text>}>Key numbers</SectionTitle>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+      <Grid2>
         {k ? <KpiTile label="Sales · 30 days" icon="trending-up-outline" toneName="success" value={money(k.sales_30d.revenue, currency)} sub={`${num(k.sales_30d.units)} units`} delta={salesDelta != null ? { value: salesDelta } : null} onPress={() => openMetric("sales", "Sales")} /> : null}
         {k ? <KpiTile label="Forecast · 30 days" icon="analytics-outline" toneName="primary" value={money(k.forecast_30d.revenue, currency)} sub={`${num(k.forecast_30d.units)} units expected`} onPress={() => openMetric("forecast", "Forecast")} /> : null}
         {cards ? (
@@ -218,7 +218,7 @@ export function DashboardScreen() {
         {k ? <KpiTile label="Days of cover" icon="hourglass-outline" toneName={k.median_cover_days != null && k.median_cover_days < 14 ? "warning" : "neutral"} value={k.median_cover_days != null ? `${k.median_cover_days} d` : "-"} sub="median across products" onPress={() => openMetric("cover", "Days of cover")} /> : null}
         {cards ? <KpiTile label="Cash in overstock" icon="layers-outline" toneName={cards.cash_in_overstock.value > 0 ? "info" : "neutral"} value={money(cards.cash_in_overstock.value, currency)} sub={`${num(cards.cash_in_overstock.units)} units past ${cards.cash_in_overstock.overstock_days} days · at ${cards.cash_in_overstock.basis}`} onPress={() => openMetric("overstock", "Cash in overstock")} /> : null}
         {cards ? <KpiTile label="Revenue protected" icon="shield-checkmark-outline" toneName="success" value={money(cards.revenue_protected.value, currency)} sub={`${cards.revenue_protected.alerts} ${cards.revenue_protected.alerts === 1 ? "alert" : "alerts"} fixed · last ${cards.revenue_protected.period_days} days`} onPress={() => openMetric("protected", "Revenue protected")} /> : null}
-      </View>
+      </Grid2>
 
       {dash.data?.units_sold_vs_forecast?.length ? (
         <>

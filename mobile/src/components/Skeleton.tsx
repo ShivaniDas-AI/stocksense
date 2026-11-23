@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, View, ViewStyle } from "react-native";
 import { radius, space, useTheme } from "../theme";
+import { Grid2 } from "./ui";
 
 /** A softly pulsing placeholder block, shown while data loads. */
 export function Skeleton({ width, height, round, style }: { width?: number | `${number}%`; height: number; round?: boolean; style?: ViewStyle }) {
@@ -54,15 +55,15 @@ export function DashboardSkeleton() {
         </View>
       </View>
       <Skeleton width="30%" height={11} style={{ marginTop: space.xl, marginBottom: space.sm }} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+      <Grid2>
         {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={[card, { flex: 1, minWidth: "46%", padding: space.md }]}>
+          <View key={i} style={[card, { flex: 1, padding: space.md }]}>
             <Skeleton width="55%" height={11} />
             <Skeleton width="65%" height={24} style={{ marginTop: 10 }} />
             <Skeleton width="80%" height={12} style={{ marginTop: 8 }} />
           </View>
         ))}
-      </View>
+      </Grid2>
       <Skeleton width="30%" height={11} style={{ marginTop: space.xl, marginBottom: space.sm }} />
       {[0, 1, 2].map((i) => (
         <View key={i} style={[card, { padding: space.md, marginBottom: space.sm, flexDirection: "row" }]}>
@@ -97,14 +98,14 @@ export function ProductSkeleton() {
         <Skeleton width="90%" height={18} style={{ marginTop: 10 }} />
         <Skeleton width="70%" height={13} style={{ marginTop: 8 }} />
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginTop: space.lg }}>
+      <Grid2 style={{ marginTop: space.lg }}>
         {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={[card, { flex: 1, minWidth: "46%", padding: space.md }]}>
+          <View key={i} style={[card, { flex: 1, padding: space.md }]}>
             <Skeleton width="55%" height={11} />
             <Skeleton width="60%" height={24} style={{ marginTop: 10 }} />
           </View>
         ))}
-      </View>
+      </Grid2>
       <View style={[card, { marginTop: space.lg }]}>
         <Skeleton width="100%" height={190} />
       </View>
