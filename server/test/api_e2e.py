@@ -339,8 +339,9 @@ def main():
     st, b, _ = call("GET", "/ask/usage", K)
     check("ask usage", st == 200 and b["data"]["monthly_limit"] is None, b)
     st, b, _ = call("POST", "/ask", K, {"question": "What should I reorder this week?"})
-    if b and isinstance(b, dict) and "error" in b and b["error"]["code"] == "ai_not_configured":
-        check("ask without ANTHROPIC_API_KEY -> clear 503", st == 503, b)
+    ai_on = not (b and isinstance(b, dict) and "error" in b and b["error"]["code"] == "ai_not_configured")
+    if not ai_on:
+        check("ask without an AI key -> clear 503", st == 503, b)
     else:
         check("ask answers", st == 200 and b["data"]["answer"], (st, b))
 
@@ -389,7 +390,10 @@ def main():
     st, b, _ = sim({"reply_id": "m:summary"})
     check("view-only can still read the summary", "Today's summary" in b["data"]["replies"][0]["text"], "")
     st, b, _ = sim({"text": "tee"})
-    check("typed text without AI searches products", b["data"]["replies"][0]["type"] in ("list", "image"), b["data"]["replies"][0])
+    if ai_on:
+        check("typed text goes to the AI and gets an answer", b["data"]["replies"][0]["type"] == "text" and len(b["data"]["replies"][0]["text"]) > 20, b["data"]["replies"][0])
+    else:
+        check("typed text without AI searches products", b["data"]["replies"][0]["type"] in ("list", "image"), b["data"]["replies"][0])
     st, b, _ = call("DELETE", f"/whatsapp/numbers/{num['id']}", K)
     check("disconnect number", st == 200 and b["data"]["disconnected"], b)
 
